@@ -1,0 +1,18 @@
+// foundation_cad.js - Facade for Modularized CAD Engine
+
+// --- Re-exports from State Store ---
+export { 
+  FLOORS, floorData, currentFloor, setCurrentFloor,
+  dxfLines, dxfTexts, dxfLayerVisibility, dxfVAxes, dxfHAxes, dxfSkewedAxes,
+  nextId, updateNextId, getFloorData
+} from './data/state_store.js';
+
+// --- Re-exports from Viewport Manager ---
+export { 
+  canvas, ctx, W, H, viewState,
+  initCanvas, resizeCanvas, setPanScale,
+  worldToScreen, screenToWorld, panCanvas
+} from './rendering_helpers.js'; // Actually, I should use rendering/viewport_manager.js
+
+// Wait, foundation_main.js imports from ./rendering_helpers.js.
+// Let's check rendering_helpers.js.

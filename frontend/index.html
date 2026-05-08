@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AZ 斜め壁アシスト — 基礎・床検定 Web-CAD</title>
+<meta name="description" content="任意多角形スラブの荷重分配と基礎梁検定を行うWeb-CADツール">
+<style>
+  :root {
+    --bg-main: #0f1117;
+    --bg-panel: #181b22;
+    --bg-panel-alt: #1e222b;
+    --bg-input: #252830;
+    --border: #2d3140;
+    --border-focus: #5b8afe;
+    --text-primary: #e4e6ec;
+    --text-secondary: #8d92a0;
+    --text-muted: #5a5f72;
+    --accent: #5b8afe;
+    --accent-dim: rgba(91,138,254,0.15);
+    --success: #34c77b;
+    --warn: #f5a623;
+    --danger: #f25c5c;
+    --canvas-bg: #14161d;
+    --grid-line: rgba(255,255,255,0.04);
+    --radius: 6px;
+    --radius-sm: 4px;
+    --font: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  }
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; font-family: var(--font); background: var(--bg-main); color: var(--text-primary); font-size: 13px; }
+
+  /* ─── LAYOUT ────────────────── */
+  .app { display: flex; flex-direction: column; height: 100vh; }
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    height: 42px; padding: 0 16px;
+    background: linear-gradient(90deg, #1a1d27, #1f2330);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .topbar-brand { display: flex; align-items: center; gap: 10px; }
+  .topbar-logo {
+    font-size: 14px; font-weight: 700; letter-spacing: 1px;
+    background: linear-gradient(135deg, #5b8afe, #a78bfa);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .topbar-title { font-size: 12px; font-weight: 500; color: var(--text-secondary); }
+  .topbar-floor-tabs { display: flex; gap: 2px; }
+  .topbar-floor-tabs button {
+    padding: 4px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: transparent; color: var(--text-secondary); font-size: 11px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .topbar-floor-tabs button:hover { background: var(--bg-panel-alt); color: var(--text-primary); }
+  .topbar-floor-tabs button.active {
+    background: var(--accent-dim); color: var(--accent); border-color: var(--accent);
+  }
+  
+  .view-mode-btn {
+    padding: 4px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: transparent; color: var(--text-secondary); font-size: 11px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .view-mode-btn:hover { background: var(--bg-panel-alt); color: var(--text-primary); }
+  .view-mode-btn.active {
+    background: var(--accent); color: #fff; border-color: var(--accent);
+  }
+
+  .workspace { display: flex; flex: 1; overflow: hidden; }
+
+  /* ─── LEFT PANEL ──────────────── */
+  .panel-left {
+    width: 260px; min-width: 240px; flex-shrink: 0;
+    background: var(--bg-panel);
+    border-right: 1px solid var(--border);
+    display: block;
+    height: 100vh;
+    overflow-y: auto !important;
+    padding-bottom: 100px;
+  }
+  
+  /* ─── CENTER: CANVAS ─────────── */
+  .canvas-wrap {
+    flex: 1; position: relative; overflow: hidden;
+    background: var(--canvas-bg);
+  }
+
+  /* ─── RIGHT PANEL ──────────────── */
+  .panel-right {
+    width: 300px; min-width: 300px; flex-shrink: 0;
+    background: var(--bg-panel);
+    border-left: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    overflow-y: auto; overflow-x: hidden; min-height: 0;
+  }
+
+  .panel-section {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .panel-section-title {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;
+    color: var(--text-muted); margin-bottom: 10px;
+  }
+  .prop-row { display: flex; align-items: center; margin-bottom: 6px; gap: 8px; }
+  .prop-label { font-size: 11px; color: var(--text-secondary); width: 80px; flex-shrink: 0; }
+  .prop-value {
+    flex: 1; padding: 4px 8px; background: var(--bg-input); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); color: var(--text-primary); font-size: 12px;
+    outline: none; font-family: var(--mono);
+  }
+  .prop-value:focus { border-color: var(--border-focus); }
+  select.prop-value { cursor: pointer; }
+
+  .panel-datalist { padding: 0; }
+  .panel-datalist table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .panel-datalist th {
+    position: sticky; top: 0; z-index: 2;
+    background: var(--bg-panel-alt); color: var(--text-muted); font-weight: 600;
+    padding: 5px 6px; text-align: left; border-bottom: 1px solid var(--border);
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .panel-datalist td {
+    padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,0.03);
+    color: var(--text-secondary); font-family: var(--mono); font-size: 11px;
+  }
+  .panel-datalist tr:hover td { background: rgba(91,138,254,0.05); }
+  .panel-datalist tr.selected td { background: var(--accent-dim); color: var(--accent); }
+
+  /* ─── CENTER: CANVAS ─────────── */
+  .canvas-wrap {
+    flex: 1; position: relative; overflow: hidden;
+    background: var(--canvas-bg);
+  }
+  #main-canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+  .canvas-hud {
+    position: absolute; bottom: 8px; left: 10px;
+    font-size: 10px; font-family: var(--mono); color: var(--text-muted);
+    pointer-events: none; user-select: none;
+  }
+  .canvas-snap-indicator {
+    position: absolute; pointer-events: none;
+    width: 14px; height: 14px; border: 2px solid var(--accent);
+    border-radius: 50%; transform: translate(-50%,-50%);
+    display: none; z-index: 5;
+    box-shadow: 0 0 6px rgba(91,138,254,0.5);
+  }
+  .undo-redo-panel {
+    position: absolute; top: 12px; left: 12px; z-index: 10; display: flex; gap: 6px;
+  }
+
+  /* ─── TOOLBAR & UTILS ─────────── */
+
+  .tool-group { display: flex; flex-direction: column; gap: 3px; }
+  .tool-btn {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 12px; border: 1px solid transparent; border-radius: var(--radius-sm);
+    background: transparent; color: var(--text-secondary); font-size: 12px;
+    cursor: pointer; transition: all 0.15s; text-align: left;
+  }
+  .tool-btn:hover { background: var(--bg-panel-alt); color: var(--text-primary); }
+  .tool-btn.active {
+    background: var(--accent-dim); color: var(--accent); border-color: rgba(91,138,254,0.3);
+  }
+  .tool-btn .tool-icon { font-size: 14px; width: 20px; text-align: center; }
+  .tool-btn .tool-key {
+    margin-left: auto; font-size: 10px; font-family: var(--mono);
+    color: var(--text-muted); background: var(--bg-input); padding: 1px 5px;
+    border-radius: 3px;
+  }
+
+  .dxf-upload-area {
+    padding: 12px; border: 2px dashed var(--border); border-radius: var(--radius);
+    text-align: center; cursor: pointer; transition: border-color 0.2s;
+    color: var(--text-muted); font-size: 11px;
+  }
+  .dxf-upload-area:hover { border-color: var(--accent); color: var(--text-secondary); }
+  .dxf-upload-area.loaded { border-color: var(--success); border-style: solid; }
+  .dxf-upload-area input { display: none; }
+
+  /* ─── SLAB BOUNDARY UI ─────── */
+  .boundary-editor { display: flex; flex-direction: column; gap: 4px; }
+  .boundary-row {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--text-secondary);
+  }
+  .boundary-row select {
+    flex: 1; padding: 3px 6px; background: var(--bg-input); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); color: var(--text-primary); font-size: 11px; outline: none;
+  }
+
+  /* ─── SCROLLBAR ───────── */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+  .status-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 10px; font-weight: 600;
+  }
+  .status-badge.ok { background: rgba(52,199,123,0.15); color: var(--success); }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- Straight Skeleton Library (CGAL WASM Wrapper) -->
+<!-- 1. CDN (Local file fallback) -->
+<script src="https://unpkg.com/straight-skeleton@latest/dist/index.js"></script>
+<script>
+  if (typeof SkeletonBuilder === 'undefined' && window['straight-skeleton']) {
+    window.SkeletonBuilder = window['straight-skeleton'].SkeletonBuilder;
+  }
+</script>
+<!-- 2. Local Fallback -->
+<script src="assets/js/lib/straight-skeleton.js"></script>
+<script>
+  if (typeof SkeletonBuilder === 'undefined' && window['straight-skeleton']) {
+    window.SkeletonBuilder = window['straight-skeleton'].SkeletonBuilder;
+  }
+</script>
+</head>
+<body>
+<div class="app">
+  <!-- ═══ TOP BAR ═══ -->
+  <div class="topbar">
+    <div class="topbar-brand">
+      <span class="topbar-logo">AZ 斜め壁アシスト</span>
+      <span class="topbar-title">基礎・床検定 Web-CAD</span>
+    </div>
+    <div class="topbar-floor-tabs" id="floorTabs">
+      <button data-floor="PH">PH階</button>
+      <button data-floor="R">R階</button>
+      <button data-floor="3">3階</button>
+      <button data-floor="2">2階</button>
+      <button data-floor="1" class="active">1F / 基礎</button>
+      <button onclick="window.fitAll()" style="margin-left:8px; background:var(--bg-panel-alt); border-color:var(--accent); color:var(--accent);">全体</button>
+    </div>
+    <div style="display:flex; align-items:center; gap:10px;">
+    </div>
+  </div>
+
+  <!-- ═══ WORKSPACE ═══ -->
+  <div class="workspace">
+    <!-- ─── LEFT: Properties & List ─── -->
+    <div class="panel-left" id="sidebar">
+      <!-- ─── DXF / ARKITREND ─── -->
+      <!-- 全体設計条件は右パネルへ移動しました -->
+
+
+      <!-- ─── DXF / ARKITREND ─── -->
+      <div class="panel-section">
+        <div class="panel-section-title">構造用DXF 統合・解析</div>
+        
+        <div class="floor-upload-grid" style="display:grid; gap:6px; margin-bottom:12px;">
+          <!-- 1F (Required) -->
+          <div class="floor-upload-item" style="padding:8px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:4px; cursor:pointer; font-size:11px; display:flex; justify-content:space-between; align-items:center;">
+            <span>1F平面図 <span style="color:var(--danger);">*</span></span>
+            <span id="status-1f" class="file-status" style="color:var(--success); font-weight:bold;">未選択</span>
+            <input type="file" id="dxf-input-1f" accept=".dxf" style="display:none;">
+          </div>
+          <!-- 2F -->
+          <div class="floor-upload-item" style="padding:8px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:4px; cursor:pointer; font-size:11px; display:flex; justify-content:space-between; align-items:center;">
+            <span>2F平面図</span>
+            <span id="status-2f" class="file-status" style="color:var(--text-muted);">未選択</span>
+            <input type="file" id="dxf-input-2f" accept=".dxf" style="display:none;">
+          </div>
+          <!-- 3F -->
+          <div class="floor-upload-item" style="padding:8px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:4px; cursor:pointer; font-size:11px; display:flex; justify-content:space-between; align-items:center;">
+            <span>3F平面図</span>
+            <span id="status-3f" class="file-status" style="color:var(--text-muted);">未選択</span>
+            <input type="file" id="dxf-input-3f" accept=".dxf" style="display:none;">
+          </div>
+          <!-- PH -->
+          <div class="floor-upload-item" style="padding:8px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:4px; cursor:pointer; font-size:11px; display:flex; justify-content:space-between; align-items:center;">
+            <span>PH平面図</span>
+            <span id="status-ph" class="file-status" style="color:var(--text-muted);">未選択</span>
+            <input type="file" id="dxf-input-ph" accept=".dxf" style="display:none;">
+          </div>
+        </div>
+
+        <button id="btnMergeFloors" class="side-btn" style="background:var(--accent); color:white; border:none; padding:10px; font-weight:bold; margin-bottom:15px; width:100%;">
+          🚀 構造用DXFに統合・解析
+        </button>
+        <button id="btnDownloadMergedDxf" class="side-btn" style="display:none; background:var(--success); color:white; border:none; padding:8px; font-weight:bold; margin-bottom:15px; width:100%;">
+          💾 統合済みDXFをダウンロード
+        </button>
+
+        <hr style="border:0; border-top:1px solid var(--border); margin:10px 0;">
+        <input type="file" id="excel-upload" accept=".xlsx, .csv" style="display:none" onchange="window.handleNwExcelUpload(event)">
+        <button onclick="document.getElementById('excel-upload').click()" class="side-btn" style="width:100%; padding:10px; font-weight:bold; margin-bottom: 8px;">📥 XLSXからNw読込</button>
+        <button onclick="window.openWallAxialModal()" class="side-btn" style="width:100%; padding:10px; font-weight:bold; margin-bottom: 8px;">🧱 壁軸力図(立面フレーム)</button>
+        <div id="excelFileName" style="font-size:10px; color:#aaa; margin-bottom:10px; text-align:center;"></div>
+        
+        <!-- 標準階高設定は右パネルへ移動しました -->
+
+        <!-- エラー修正用の隠しスパン (旧コード互換用) -->
+        <span id="dxfFileName" style="display:none;"></span>
+
+      </div>
+
+
+      <!-- 作図ツールは右パネルへ移動しました -->
+
+
+      <!-- ─── UNDERLAY VISIBILITY ─── -->
+      <div class="panel-section">
+        <div class="panel-section-title">下絵表示設定 (DXF)</div>
+        <div style="margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 6px;">
+          <label style="font-weight: bold; color: var(--accent);"><input type="checkbox" id="vis-dxf" checked onchange="if(window.state) window.state.showDxf = this.checked; callRender()"> 下絵を表示する</label>
+        </div>
+        <div id="underlay-visibility-controls" style="font-size:10px; display:grid; grid-template-columns:1fr 1fr; gap:4px;">
+          <label title="PH階の下絵を表示"><input type="checkbox" id="vis-underlay-ph" onchange="callRender()"> PH階</label>
+          <label title="R階の下絵を表示"><input type="checkbox" id="vis-underlay-r" onchange="callRender()"> R階</label>
+          <label title="3階の下絵を表示"><input type="checkbox" id="vis-underlay-3" onchange="callRender()"> 3階</label>
+          <label title="2階の下絵を表示"><input type="checkbox" id="vis-underlay-2" onchange="callRender()"> 2階</label>
+          <label title="1F/基礎の下絵を表示"><input type="checkbox" id="vis-underlay-1" checked onchange="callRender()"> 1F / 基礎</label>
+        </div>
+      </div>
+
+      <!-- ─── VISIBILITY ─── -->
+      <div class="panel-section">
+        <div class="panel-section-title">表示設定</div>
+        <div id="visibility-controls" style="font-size:10px; display:grid; grid-template-columns:1fr 1fr; gap:4px;">
+          <label><input type="checkbox" id="vis-col" checked onchange="callRender()"> 柱</label>
+          <label><input type="checkbox" id="vis-wall" checked onchange="callRender()"> 壁</label>
+          <label><input type="checkbox" id="vis-beam" checked onchange="callRender()"> 梁</label>
+          <label><input type="checkbox" id="vis-fbeam" checked onchange="callRender()"> 基礎梁</label>
+          <label><input type="checkbox" id="vis-slab" checked onchange="callRender()"> 床</label>
+          <label><input type="checkbox" id="vis-diaph" checked onchange="callRender()"> 構面</label>
+        </div>
+        <div style="margin-top:8px; display:flex; flex-direction:column; gap:4px;">
+          <label style="font-size:10px;"><input type="checkbox" id="showGrid" checked onchange="callRender()"> グリッド表示</label>
+          <label style="font-size:11px; font-weight:bold; color:var(--accent); cursor:pointer;">
+            <input type="checkbox" id="vis-exterior-viz" onchange="window.updateSkewedVizDropdown(); callRender()"> 🛡️ 外壁線の確認 (2倍スパン対象)
+          </label>
+          <div id="skewed-viz-container" style="margin-top: 5px; margin-left: 20px;">
+            <div style="font-size: 9px; color: var(--text-muted); margin-bottom: 2px;">斜め軸回転モデル確認:</div>
+            <select id="vis-skewed-axis-select" style="width: 100%; font-size: 10px; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border); border-radius: 3px; padding: 2px;" onchange="callRender()">
+              <option value="">-- 未選択 --</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── DATA LIST (LEGACY) ─── -->
+      <div class="panel-section">
+        <div class="panel-section-title">データ一覧</div>
+        <div class="list-tabs" style="display:flex; gap:5px; margin-bottom:10px; flex-wrap:wrap;">
+          <button data-list="columns" class="active" onclick="window.switchMenuTab(this)" style="padding:4px 10px; font-size:11px;">柱</button>
+          <button data-list="walls" onclick="window.switchMenuTab(this)" style="padding:4px 10px; font-size:11px;">壁</button>
+          <button data-list="beams" onclick="window.switchMenuTab(this)" style="padding:4px 10px; font-size:11px;">基礎梁</button>
+          <button data-list="slabs" onclick="window.switchMenuTab(this)" style="padding:4px 10px; font-size:11px;">スラブ</button>
+        </div>
+        <div class="panel-datalist" id="dataListContainer" style="font-size:10px;">
+           <!-- Data list items -->
+        </div>
+      </div>
+
+      <!-- ─── SETTINGS ─── -->
+      <div class="panel-section">
+        <div class="panel-section-title">設定・保存</div>
+        <button class="tool-btn" onclick="showCalculationReport()" style="width:100%; justify-content:center; background:var(--accent); color:#fff; border:none; margin-bottom:8px; font-weight:bold;">
+          📊 計算書出力 (PDF)
+        </button>
+        <div style="display:flex; gap:4px; margin-bottom:4px;">
+          <button id="btn-save-json" type="button" class="tool-btn" style="flex:1; justify-content:center;">📥 保存</button>
+          <button class="tool-btn" onclick="document.getElementById('json-upload').click()" style="flex:1; justify-content:center;">📂 読込</button>
+        </div>
+        <input type="file" id="json-upload" accept=".json" style="display:none;">
+      </div>
+    </div>
+
+    <!-- ─── CENTER: Canvas ─── -->
+    <div class="canvas-wrap" id="canvasWrap">
+      <div class="undo-redo-panel no-print">
+        <button id="btnUndo" class="tool-btn" style="background:var(--bg-panel); box-shadow: 0 2px 4px rgba(0,0,0,0.2);"><span class="tool-icon">↩</span> 戻る</button>
+        <button id="btnRedo" class="tool-btn" style="background:var(--bg-panel); box-shadow: 0 2px 4px rgba(0,0,0,0.2);"><span class="tool-icon">↪</span> 進む</button>
+      </div>
+      <canvas id="cadCanvas"></canvas>
+      <div class="canvas-snap-indicator" id="snapIndicator"></div>
+      <div class="canvas-hud no-print" id="canvasHud">X: 0  Y: 0  |  Zoom: 1.00</div>
+    </div>
+
+    <!-- ─── RIGHT: Tools & Properties ─── -->
+    <div class="panel-right" id="right-sidebar">
+      <!-- ─── DRAWING TOOLS (Moved to Top) ─── -->
+      <div class="panel-section" style="padding:15px; border-bottom:1px solid var(--border);">
+        <div class="panel-section-title">作図ツール</div>
+        <div class="tool-group" id="toolGroup">
+          <button class="tool-btn active" data-tool="selectGrid"><span class="tool-icon">📐</span> グリッド <span class="tool-key">V</span></button>
+          <button class="tool-btn" data-tool="skewedGrid"><span class="tool-icon">📐/</span> 斜め通り芯 <span class="tool-key">G</span></button>
+          <button class="tool-btn" data-tool="column"><span class="tool-icon">⬜</span> 柱 <span class="tool-key">C</span></button>
+          <button class="tool-btn" data-tool="wall"><span class="tool-icon">🧱</span> 耐力壁 <span class="tool-key">W</span></button>
+          <button class="tool-btn" data-tool="diaphragm"><span class="tool-icon">💠</span> 構面 <span class="tool-key">H</span></button>
+          <button class="tool-btn" data-tool="slab"><span class="tool-icon">⬡</span> スラブ <span class="tool-key">S</span></button>
+          <button class="tool-btn" data-tool="fbeam"><span class="tool-icon">▤</span> 基礎梁 <span class="tool-key">F</span></button>
+          <button class="tool-btn" data-tool="beam"><span class="tool-icon">━</span> 梁 <span class="tool-key">B</span></button>
+          <button class="tool-btn" data-tool="delete"><span class="tool-icon">🗑</span> 削除 <span class="tool-key">D</span></button>
+          <button class="tool-btn" data-tool="selectElem"><span class="tool-icon">🔍</span> 選択 <span class="tool-key">A</span></button>
+        </div>
+      </div>
+      <!-- ─── GLOBAL DESIGN SETTINGS (Moved) ─── -->
+      <div class="global-settings" style="padding:15px; background:rgba(255,255,255,0.03); border-bottom:1px solid var(--border); color:var(--text-primary);">
+        <div class="panel-section-title" style="color:var(--accent); font-weight:bold; margin-bottom:12px;">🏠 全体設計条件</div>
+        <div class="prop-row">
+          <label class="prop-label" style="width:100px;">コンクリート (Fc)</label>
+          <select id="globalFc" class="prop-value" onchange="window.updateGlobalDesignSettings()">
+            <option value="18">Fc18</option>
+            <option value="21" selected>Fc21</option>
+            <option value="24">Fc24</option>
+            <option value="27">Fc27</option>
+            <option value="30">Fc30</option>
+          </select>
+        </div>
+        <div class="prop-row">
+          <label class="prop-label" style="width:100px;">鉄筋仕様 (SD)</label>
+          <select id="globalSD" class="prop-value" onchange="window.updateGlobalDesignSettings()">
+            <option value="295" selected>SD295</option>
+            <option value="345">SD345</option>
+          </select>
+        </div>
+
+        <div class="panel-section-title" style="color:var(--accent); font-weight:bold; margin-top:15px; margin-bottom:10px;">💠 構面共通仕様 (ΔQa [kN/m])</div>
+        <div style="display:grid; grid-template-columns: 45px 80px 80px; gap: 4px; align-items: center; font-size: 11px;">
+          <div style="color:var(--text-muted);">階</div>
+          <div style="color:var(--text-muted); text-align:center;">屋根</div>
+          <div style="color:var(--text-muted); text-align:center;">床</div>
+          
+          <div>PH</div>
+          <input type="number" id="diaphQa-PH-roof" class="prop-value" style="padding: 4px; text-align: right;" value="1.96" step="0.01" onchange="window.updateGlobalDiaphragmSpecs('PH', 'roof', this.value)">
+          <input type="number" id="diaphQa-PH-floor" class="prop-value" style="padding: 4px; text-align: right;" value="7.84" step="0.01" onchange="window.updateGlobalDiaphragmSpecs('PH', 'floor', this.value)">
+          
+          <div>R</div>
+          <input type="number" id="diaphQa-R-roof" class="prop-value" style="padding: 4px; text-align: right;" value="1.96" step="0.01" onchange="window.updateGlobalDiaphragmSpecs('R', 'roof', this.value)">
+          <input type="number" id="diaphQa-R-floor" class="prop-value" style="padding: 4px; text-align: right;" value="7.84" step="0.01" onchange="window.updateGlobalDiaphragmSpecs('R', 'floor', this.value)">
+          
+          <div>3F</div>
+          <input type="number" id="diaphQa-3-roof" class="prop-value" style="padding: 4px; text-align: right;" value="1.96" step="0.01" onchange="window.updateGlobalDiaphragmSpecs('3', 'roof', this.value)">
+          <input type="number" id="diaphQa-3-floor" class="prop-value" style="padding: 4px; text-align: right;" value="7.84" step="0.01" onchange="window.updateGlobalDiaphragmSpecs('3', 'floor', this.value)">
+          
+          <div>2F</div>
+          <input type="number" id="diaphQa-2-roof" class="prop-value" style="padding: 4px; text-align: right;" value="1.96" step="0.01" onchange="window.updateGlobalDiaphragmSpecs('2', 'roof', this.value)">
+          <input type="number" id="diaphQa-2-floor" class="prop-value" style="padding: 4px; text-align: right;" value="7.84" step="0.01" onchange="window.updateGlobalDiaphragmSpecs('2', 'floor', this.value)">
+          
+          <div>1F</div>
+          <input type="number" id="diaphQa-1-roof" class="prop-value" style="padding: 4px; text-align: right;" value="1.96" step="0.01" onchange="window.updateGlobalDiaphragmSpecs('1', 'roof', this.value)">
+          <input type="number" id="diaphQa-1-floor" class="prop-value" style="padding: 4px; text-align: right;" value="7.84" step="0.01" onchange="window.updateGlobalDiaphragmSpecs('1', 'floor', this.value)">
+        </div>
+
+        <!-- ─── STANDARD FLOOR HEIGHT (Relocated) ─── -->
+        <div class="panel-section-title" style="color:var(--accent); font-weight:bold; margin-top:20px; margin-bottom:12px;">📏 標準階高設定 (mm)</div>
+        <div class="floor-height-grid" style="display:grid; grid-template-columns:1fr; gap:6px;">
+          <div class="prop-row" style="margin-bottom:0;">
+            <label class="prop-label" style="width:50px;">PH階</label>
+            <input type="number" id="defaultHeight-PH" class="prop-value" value="2730" onchange="window.updateFloorHeight('PH', this.value)" />
+          </div>
+          <div class="prop-row" style="margin-bottom:0;">
+            <label class="prop-label" style="width:50px;">R階</label>
+            <input type="number" id="defaultHeight-R" class="prop-value" value="2730" onchange="window.updateFloorHeight('R', this.value)" />
+          </div>
+          <div class="prop-row" style="margin-bottom:0;">
+            <label class="prop-label" style="width:50px;">3階</label>
+            <input type="number" id="defaultHeight-3" class="prop-value" value="2730" onchange="window.updateFloorHeight('3', this.value)" />
+          </div>
+          <div class="prop-row" style="margin-bottom:0;">
+            <label class="prop-label" style="width:50px;">2階</label>
+            <input type="number" id="defaultHeight-2" class="prop-value" value="2730" onchange="window.updateFloorHeight('2', this.value)" />
+          </div>
+          <div class="prop-row" style="margin-bottom:0;">
+            <label class="prop-label" style="width:50px;">1階</label>
+            <input type="number" id="defaultHeight-1" class="prop-value" value="2730" onchange="window.updateFloorHeight('1', this.value)" />
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── PROPERTY PANEL ─── -->
+      <div id="property-panel" style="width:100%; padding:15px; min-height:400px;">
+        <div style="color:var(--text-muted); font-size:11px; text-align:center; padding-top:40px;">
+          ツールを選択するか、要素をクリックしてください
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="assets/js/modules/foundation/foundation_main.js?v=20260402"></script>
+  <!-- Calculation Report Modal -->
+  <div id="reportModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; align-items:center; justify-content:center;">
+    <div style="background:var(--bg-panel); width:95%; height:90%; border-radius:12px; border:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; box-shadow:var(--shadow);">
+      <div style="padding:16px 24px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+        <h2 style="font-size:18px; color:var(--text-primary); margin:0;">📊 構造計算書（検討書フォーマット）</h2>
+        <button onclick="document.getElementById('reportModal').style.display='none'" style="background:none; border:none; color:var(--text-secondary); font-size:24px; cursor:pointer;">&times;</button>
+      </div>
+      <div id="reportContent" style="flex:1; padding:24px; overflow-y:auto; color:var(--text-primary);">
+        <!-- Table will be injected here -->
+      </div>
+      <div style="padding:16px 24px; border-top:1px solid var(--border); text-align:right;">
+        <button onclick="window.print()" class="tool-btn" style="background:var(--success); color:#fff; border:none; padding:8px 20px;">🖨 印刷 / PDF出力</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,102 @@
+// ui/prop_panel_main.js
+import { floorData, currentFloor, state } from '../foundation_cad.js';
+import { buildNodePanel } from './prop_panel_node.js';
+import { buildColumnPanel } from './prop_panel_column.js';
+import { buildBeamPanel } from './prop_panel_beam.js';
+import { buildWallPanel } from './prop_panel_wall.js';
+import { buildSlabPanel } from './prop_panel_slab.js';
+import { buildDiaphragmPanel } from './prop_panel_diaphragm.js';
+import { buildAxisPanel } from './prop_panel_axis.js';
+import { buildMultiSelectPanel } from './prop_panel_multi.js';
+import { buildDefaultToolPanel } from './prop_panel_default.js';
+
+console.log("[PropPanelMain] Module Loaded. WallPanel version check: ", buildWallPanel.toString().slice(0, 50));
+
+/**
+ * プロパティパネル全体を更新・再描画する
+ */
+export const updatePropertyPanel = function() {
+  const cont = document.getElementById('property-panel') || document.querySelector('.property-panel');
+  if (!cont) return;
+
+  // state はインポート済み
+  const fd = floorData[currentFloor];
+  if (!fd) {
+    cont.innerHTML = '<p style="color:#888; padding:10px;">階層データがロードされていません</p>';
+    return;
+  }
+
+  // スラブ詳細モーダル表示中（window.selectedType === 'SLAB'）以外なら、サイドバーを確実に見せる
+  if (window.selectedType !== 'SLAB') {
+    const sidebar = document.getElementById('right-sidebar');
+    if (sidebar) sidebar.style.display = 'flex';
+    cont.style.visibility = 'visible';
+    cont.style.pointerEvents = 'auto';
+  }
+
+  // 要素未選択時の処理（ツールのデフォルト値を表示）
+  if (!state.selectedElement && (!state.selectedElements || state.selectedElements.length === 0)) {
+    cont.innerHTML = buildDefaultToolPanel(state.currentTool);
+    return;
+  }
+
+  // 複数選択時の処理
+  if (state.selectedElements && state.selectedElements.length >= 2) {
+    cont.innerHTML = buildMultiSelectPanel(state.selectedElements);
+    return;
+  }
+
+  // 単一選択時の処理
+  const el = state.selectedElement;
+  if (!el) return;
+
+  let html = '';
+  switch (el.type) {
+    case 'node':          html = buildNodePanel(el, fd); break;
+    case 'column':        html = buildColumnPanel(el, fd); break;
+    case 'beam':      
+    case 'perimeterBeam': html = buildBeamPanel(el, fd); break;
+    case 'wall':          
+      console.log(`[PropPanelMain] Building wall panel for index ${el.index}. Exterior flag: ${fd.walls[el.index]?.isExterior}`);
+      html = buildWallPanel(el, fd); 
+      break;
+    case 'slab':          html = buildSlabPanel(el, fd); break;
+    case 'diaphragm':     html = buildDiaphragmPanel(el, fd); break;
+    case 'axis':          html = buildAxisPanel(el); break;
+    default:              html = `<p style="color:#888; font-size:11px; padding:10px;">未対応の要素です (${el.type})</p>`;
+  }
+
+  // 💡 スクロール位置とフォーカス要素を保存
+  const sidebar = document.getElementById('right-sidebar');
+  const lastScroll = sidebar ? sidebar.scrollTop : cont.scrollTop;
+  const activeId = document.activeElement ? document.activeElement.id : null;
+  
+  // 💡 更新中の高さ変動によるスクロールジャンプを防ぐ
+  // コンテナ自体の高さを一時的に固定
+  const currentHeight = cont.scrollHeight;
+  if (currentHeight > 0) cont.style.minHeight = currentHeight + 'px';
+
+  cont.innerHTML = html;
+
+  // 💡 スクロール位置を復元
+  if (sidebar) sidebar.scrollTop = lastScroll;
+  cont.scrollTop = lastScroll;
+
+  // 💡 スクロール位置とフォーカスを念のため次のフレームでも復元 (DOM更新のタイミングずれ対策)
+  requestAnimationFrame(() => {
+    if (sidebar && lastScroll > 0) sidebar.scrollTop = lastScroll;
+    else if (lastScroll > 0) cont.scrollTop = lastScroll;
+    
+    cont.style.minHeight = ''; // min-height解除
+    
+    if (activeId) {
+      const el = document.getElementById(activeId);
+      if (el) el.focus();
+    }
+  });
+
+  // UI生成後、必要に応じて再描画をキック
+  if (typeof window.callRender === 'function') window.callRender();
+};
+
+window.updatePropertyPanel = updatePropertyPanel;

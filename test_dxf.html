@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Test DXF Parser</title>
+    <script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.js"></script>
+</head>
+<body>
+    <div id="output">Loading...</div>
+    <script>
+        fetch('merged_structure.dxf')
+            .then(res => res.arrayBuffer())
+            .then(buffer => {
+                const decoder = new TextDecoder('shift_jis');
+                const text = decoder.decode(buffer);
+                document.getElementById('output').innerHTML += "<br>File fetched. Length: " + text.length;
+                try {
+                    const parser = new DxfParser();
+                    const dxf = parser.parseSync(text);
+                    let result = "<br>Parsed successfully. Entities: " + (dxf.entities ? dxf.entities.length : 0);
+                    if (dxf.entities) {
+                        const lines = dxf.entities.filter(e => e.type === 'LINE');
+                        result += "<br>Lines: " + lines.length;
+                        if (lines.length > 0) {
+                            result += "<br>First line: " + JSON.stringify(lines[0]);
+                        }
+                    }
+                    document.getElementById('output').innerHTML += result;
+                } catch(e) {
+                    document.getElementById('output').innerHTML += "<br>Error parsing: " + e.message;
+                }
+            });
+    </script>
+</body>
+</html>
