@@ -20,9 +20,8 @@ export const openSlabDetailModal = (index) => {
     const sl = fd.slabs[index];
     if (!sl) return;
 
-    if (!sl.aijData) {
-        calculateAndSetSlabAIJStress(sl, fd.nodes);
-    }
+    // 💡 常に最新の計算プロトコルを適用するため再計算を強制
+    calculateAndSetSlabAIJStress(sl, fd.nodes);
     const data = sl.aijData || {};
 
     const resultText = data.isOK ? "判定：OK" : "判定：NG";
