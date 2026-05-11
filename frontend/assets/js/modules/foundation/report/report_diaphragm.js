@@ -176,13 +176,14 @@ function _skewSection(dia, fd, skewAxes, floorSpecs, currentFloor, allFloorData)
         基準軸: <strong>${result.axisLabel}</strong> (θ = ${result.thetaDeg.toFixed(1)}°) &nbsp;
         ΔQa = ${result.deltaQa.toFixed(3)} kN/m &nbsp; ${overallBadge}
       </div>
-      ${_skewDirSection(result.xDir, "X'方向", '#2980b9')}
-      ${_skewDirSection(result.yDir, "Y'方向", '#27ae60')}
-      
-      <div style="margin-top:15px; text-align:center; page-break-inside:avoid;">
+
+      <div style="margin-top:10px; margin-bottom:20px; text-align:center; page-break-inside:avoid;">
         <div style="font-size:11px; color:#666; margin-bottom:5px;">【検討モデル概念図：${result.axisLabel}軸基準】</div>
         ${_skewDiaphragmSvg(dia, fd, result)}
       </div>
+
+      ${_skewDirSection(result.xDir, "X'方向", '#2980b9')}
+      ${_skewDirSection(result.yDir, "Y'方向", '#27ae60')}
     </div>`;
 }
 
@@ -209,7 +210,7 @@ function _skewDiaphragmSvg(dia, fd, result) {
 
   const { outerMinX, outerMaxX, outerMinY, outerMaxY } = result;
   const bW = Math.max(1, maxX - minX), bH = Math.max(1, maxY - minY);
-  const pad = 120, svgW = 750, svgH = 550; // 💡 十分な余白を確保
+  const pad = 140, svgW = 750, svgH = 550; // 💡 十分な余白を確保
   const scale = Math.min((svgW - pad * 2) / bW, (svgH - pad * 2) / bH, 50);
 
   const tx = (x) => pad + (x - minX) * scale + (svgW - pad * 2 - bW * scale) / 2;
@@ -232,18 +233,22 @@ function _skewDiaphragmSvg(dia, fd, result) {
 
         if (isVertical) {
             const posX = tx(wl.pos);
-            const yStart = ty(outerMinY - 1500), yEnd = ty(outerMaxY + 1500);
+            // 💡 確実にSVG内に収まるように上下の端点をクリップ
+            const yStart = Math.min(svgH - 20, ty(outerMinY - 1000));
+            const yEnd = Math.max(20, ty(outerMaxY + 1000));
             svg += `<line x1="${posX}" y1="${yStart}" x2="${posX}" y2="${yEnd}" stroke="${color}" stroke-width="${wl.isEffective ? 1.5 : 0.8}" stroke-dasharray="10,2,2,2" />`;
             // 上端にラベル (yEndが上)
-            svg += `<text x="${posX}" y="${yEnd - 30}" font-size="13" fill="${color}" text-anchor="middle" font-weight="bold">${symbol}</text>`;
-            svg += `<text x="${posX}" y="${yEnd - 12}" font-size="11" fill="${color}" text-anchor="middle">${labelText}</text>`;
+            svg += `<text x="${posX}" y="${Math.max(15, yEnd - 15)}" font-size="13" fill="${color}" text-anchor="middle" font-weight="bold">${symbol}</text>`;
+            svg += `<text x="${posX}" y="${Math.max(28, yEnd + 10)}" font-size="11" fill="${color}" text-anchor="middle">${labelText}</text>`;
         } else {
             const posY = ty(wl.pos);
-            const xStart = tx(outerMinX - 1500), xEnd = tx(outerMaxX + 1500);
+            // 💡 確実にSVG内に収まるように左右の端点をクリップ
+            const xStart = Math.max(20, tx(outerMinX - 1000));
+            const xEnd = Math.min(svgW - 20, tx(outerMaxX + 1000));
             svg += `<line x1="${xStart}" y1="${posY}" x2="${xEnd}" y2="${posY}" stroke="${color}" stroke-width="${wl.isEffective ? 1.5 : 0.8}" stroke-dasharray="10,2,2,2" />`;
             // 左端にラベル (xStartが左)
-            svg += `<text x="${xStart - 15}" y="${posY - 10}" font-size="13" fill="${color}" text-anchor="end" font-weight="bold">${symbol}</text>`;
-            svg += `<text x="${xStart - 15}" y="${posY + 10}" font-size="11" fill="${color}" text-anchor="end">${labelText}</text>`;
+            svg += `<text x="${Math.max(5, xStart - 10)}" y="${posY - 5}" font-size="13" fill="${color}" text-anchor="end" font-weight="bold">${symbol}</text>`;
+            svg += `<text x="${Math.max(5, xStart - 10)}" y="${posY + 12}" font-size="11" fill="${color}" text-anchor="end">${labelText}</text>`;
         }
     });
   };
