@@ -78,18 +78,26 @@ export function getAxisName(colIndex, fd) {
  * 通り芯の操作
  */
 export const renameAxis = (dir, idx, newName) => {
-    const fd = floorData[currentFloor];
-    if (!fd || !fd.axes) return;
-    if (fd.axes[dir] && fd.axes[dir][idx]) {
-        const oldLabel = fd.axes[dir][idx].label;
-        fd.axes[dir][idx].label = newName;
+    const axes = dir === 'v' ? dxfVAxes : (dir === 'h' ? dxfHAxes : dxfSkewedAxes);
+    const axis = axes[idx];
+    if (axis) {
+        const oldLabel = axis.label;
+        axis.label = newName;
 
         // 耐力壁の通り芯名更新 (同期)
         FLOORS.forEach(f => {
-          if (floorData[f] && floorData[f].walls) {
-            floorData[f].walls.forEach(w => {
-              if (w.axisName === oldLabel) {
+          const fd = floorData[f];
+          if (fd && fd.walls) {
+            fd.walls.forEach(w => {
+              if (w.axisName === oldLabel && oldLabel !== "") {
                 w.axisName = newName;
+              }
+            });
+          }
+          if (fd && fd.beams) {
+            fd.beams.forEach(b => {
+              if (b.axisName === oldLabel && oldLabel !== "") {
+                b.axisName = newName;
               }
             });
           }

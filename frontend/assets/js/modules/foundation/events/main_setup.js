@@ -53,7 +53,7 @@ export function updateUnderlayCheckboxes(underlayVisibility = null) {
  * UI 設定とイベント登録
  */
 export const setupEventHandlers = function(canvas, state) {
-  window.state = state || window.state || { currentTool: 'selectGrid', selectedElements: [], currentPolygon: [] };
+  window.state = state || window.state || { currentTool: 'selectElem', selectedElements: [], currentPolygon: [] };
   
   window.floorData = floorData;
   window.currentFloor = currentFloor;
@@ -119,6 +119,11 @@ export const setupEventHandlers = function(canvas, state) {
   document.querySelectorAll('#toolGroup .tool-btn').forEach(btn => {
     btn.addEventListener('click', () => setTool(btn.dataset.tool));
   });
+
+  // 初期ツールの反映 (カーソル形状、ボタンのactiveクラス等)
+  if (state.currentTool) {
+    setTool(state.currentTool);
+  }
 
   // --- Multi-Floor Merge & Analyze Flow ---
   const floors = ['1f', '2f', '3f', 'ph'];
@@ -237,6 +242,9 @@ export const setupEventHandlers = function(canvas, state) {
         
         setFloor('1');
         updateLayerCheckboxes();
+        const { updateAllFloorHeightInputs, updateAllDiaphragmSpecsInputs } = await import('../state_manager.js');
+        updateAllFloorHeightInputs();
+        updateAllDiaphragmSpecsInputs();
         window.updatePropertyPanel?.(); window.updateDataList?.();
         fitAll(); pushHistory();
         if (typeof recalcAllTributaries === 'function') recalcAllTributaries();
@@ -274,7 +282,7 @@ export const setupEventHandlers = function(canvas, state) {
     if (state.currentTool === 'delete') { await handleDelete(state, fd, wc, cad); return; }
     const snapIdx = state.currentTool === 'column' ? cad.findSnapNode(wc.x, wc.y, 300) : cad.findSnapNode(wc.x, wc.y);
     switch (state.currentTool) {
-      case 'selectGrid': case 'selectElem': handleSelect(state, fd, wc, snapIdx, cad, e.shiftKey || e.ctrlKey); break;
+      case 'select': case 'selectGrid': case 'selectElem': handleSelect(state, fd, wc, snapIdx, cad, e.shiftKey || e.ctrlKey); break;
       case 'column': handleColumnPlace(state, fd, snapIdx); break;
       case 'beam': handleBeamDraw(state, fd, snapIdx, 'beam'); break;
       case 'fbeam': handleBeamDraw(state, fd, snapIdx, 'fbeam'); break;

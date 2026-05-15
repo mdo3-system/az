@@ -229,7 +229,7 @@
   <div class="topbar">
     <div class="topbar-brand">
       <span class="topbar-logo">AZ斜め壁補助計算Web-CAD</span>
-      <span class="topbar-version" style="margin-left: 8px; font-size: 11px; color: var(--text-secondary); opacity: 0.8;">v3.0.1</span>
+      <span class="topbar-version" style="margin-left: 8px; font-size: 11px; color: var(--text-secondary); opacity: 0.8;">v3.0.2</span>
     </div>
     <div class="topbar-floor-tabs" id="floorTabs">
       <button data-floor="PH">PH階</button>
@@ -331,6 +331,8 @@
           <label><input type="checkbox" id="vis-fbeam" checked onchange="callRender()"> 基礎梁</label>
           <label><input type="checkbox" id="vis-slab" checked onchange="callRender()"> 床</label>
           <label><input type="checkbox" id="vis-diaph" checked onchange="callRender()"> 構面</label>
+          <label><input type="checkbox" id="showNw" onchange="if(window.state) window.state.showNw = this.checked; callRender()"> Nw表示</label>
+          <label><input type="checkbox" id="showColumnId" checked onchange="if(window.state) window.state.showColumnId = this.checked; callRender()"> 柱符号表示</label>
         </div>
         <div style="margin-top:8px; display:flex; flex-direction:column; gap:4px;">
           <label style="font-size:10px;"><input type="checkbox" id="showGrid" checked onchange="callRender()"> グリッド表示</label>
@@ -391,7 +393,7 @@
       <div class="panel-section" style="padding:15px; border-bottom:1px solid var(--border);">
         <div class="panel-section-title">作図ツール</div>
         <div class="tool-group" id="toolGroup">
-          <button class="tool-btn active" data-tool="selectGrid"><span class="tool-icon">📐</span> グリッド <span class="tool-key">V</span></button>
+          <button class="tool-btn" data-tool="selectGrid"><span class="tool-icon">📐</span> グリッド <span class="tool-key">V</span></button>
           <button class="tool-btn" data-tool="skewedGrid"><span class="tool-icon">📐/</span> 斜め通り芯 <span class="tool-key">G</span></button>
           <button class="tool-btn" data-tool="column"><span class="tool-icon">⬜</span> 柱 <span class="tool-key">C</span></button>
           <button class="tool-btn" data-tool="wall"><span class="tool-icon">🧱</span> 耐力壁 <span class="tool-key">W</span></button>
@@ -400,7 +402,7 @@
           <button class="tool-btn" data-tool="fbeam"><span class="tool-icon">▤</span> 基礎梁 <span class="tool-key">F</span></button>
           <button class="tool-btn" data-tool="beam"><span class="tool-icon">━</span> 梁 <span class="tool-key">B</span></button>
           <button class="tool-btn" data-tool="delete"><span class="tool-icon">🗑</span> 削除 <span class="tool-key">D</span></button>
-          <button class="tool-btn" data-tool="selectElem"><span class="tool-icon">🔍</span> 選択 <span class="tool-key">A</span></button>
+          <button class="tool-btn active" data-tool="selectElem"><span class="tool-icon">🔍</span> 選択 <span class="tool-key">A</span></button>
         </div>
       </div>
       <!-- ─── GLOBAL DESIGN SETTINGS (Moved) ─── -->

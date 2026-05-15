@@ -38,7 +38,7 @@ export const openColumnDetailModal = function(index) {
 
   const content = document.createElement('div');
   content.className = 'modal-content';
-  content.style.cssText = 'width:90%; max-width:600px; max-height:85vh; background:#1e1e1e; color:#fff; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.5); display:flex; flex-direction:column; overflow:hidden; border: 1px solid #444; position:fixed;';
+  content.style.cssText = 'width:95%; max-width:900px; max-height:90vh; background:#1e1e1e; color:#fff; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.5); display:flex; flex-direction:column; overflow:hidden; border: 1px solid #444; position:fixed;';
 
   content.innerHTML = `
       <div id="column-modal-header" style="background:#2c3e50; padding:15px; border-bottom:1px solid #444; display:flex; justify-content:space-between; align-items:center; cursor:grab;">
@@ -107,6 +107,44 @@ export const openColumnDetailModal = function(index) {
              <div>必要引力 T: <b>${(res.T || 0).toFixed(3)} kN</b></div>
              <div>金物耐力 Ra: ${(res.criticalCase?.baseMetal?.cap || 0).toFixed(3)} kN</div>
              <div style="color:${baseOk?'#2ecc71':'#e74c3c'}; font-weight:bold;">${baseOk?'OK':'NG'}</div>
+          </div>
+        </div>
+
+        <div style="margin-top:20px;">
+          <h4 style="border-bottom:1px solid #555; padding-bottom:5px; margin-bottom:10px; color:#f39c12; font-size:13px;">📊 引張力 算定根拠詳細</h4>
+          <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:10px; color:#eee; background:rgba(0,0,0,0.2);">
+              <thead>
+                <tr style="background:#2c3e50; color:#fff;">
+                  <th style="border:1px solid #444; padding:4px;">通り</th>
+                  <th style="border:1px solid #444; padding:4px;">加力方向</th>
+                  <th style="border:1px solid #444; padding:4px;">ΣΔQiL×Hi</th>
+                  <th style="border:1px solid #444; padding:4px;">ΣΔQiR×Hi</th>
+                  <th style="border:1px solid #444; padding:4px;">Bi(頭/脚)</th>
+                  <th style="border:1px solid #444; padding:4px;">Ni(頭/脚)</th>
+                  <th style="border:1px solid #444; padding:4px;">上階ΣNi</th>
+                  <th style="border:1px solid #444; padding:4px;">軸力Nw</th>
+                  <th style="border:1px solid #444; padding:4px; background:rgba(52,152,219,0.2);">T値(柱頭)</th>
+                  <th style="border:1px solid #444; padding:4px; background:rgba(230,126,34,0.2);">T値(柱脚)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${(res.cases || []).map(cs => `
+                  <tr>
+                    <td style="border:1px solid #444; padding:4px; text-align:center;">${cs.name.split(' ')[0]}</td>
+                    <td style="border:1px solid #444; padding:4px; text-align:center;">${cs.name.split(' ').slice(1).join(' ')}</td>
+                    <td style="border:1px solid #444; padding:4px; text-align:right;">${(cs.q1_Hi || 0).toFixed(2)}</td>
+                    <td style="border:1px solid #444; padding:4px; text-align:right;">${(cs.q2_Hi || 0).toFixed(2)}</td>
+                    <td style="border:1px solid #444; padding:4px; text-align:center;">${(cs.Bi_top || 0.5).toFixed(1)} / ${(cs.Bi_bot || 0.5).toFixed(1)}</td>
+                    <td style="border:1px solid #444; padding:4px; text-align:center;">${(cs.Ni_top || 0).toFixed(2)} / ${(cs.Ni_bot || 0).toFixed(2)}</td>
+                    <td style="border:1px solid #444; padding:4px; text-align:right;">${(cs.Ni_upper || 0).toFixed(2)}</td>
+                    <td style="border:1px solid #444; padding:4px; text-align:right;">${(res.Nw || 0).toFixed(2)}</td>
+                    <td style="border:1px solid #444; padding:4px; text-align:right; font-weight:bold; color:#5b8afe;">${(cs.T_top || 0).toFixed(3)}</td>
+                    <td style="border:1px solid #444; padding:4px; text-align:right; font-weight:bold; color:#f39c12;">${(cs.T_bot || 0).toFixed(3)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

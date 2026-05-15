@@ -47,7 +47,7 @@ export let nextId = { node: 1, beam: 1, slab: 1, diaphragm: 1, wall: 1 };
 
 // --- UI 状態オブジェクト (初期値) ---
 export const state = {
-  currentTool: 'select',
+  currentTool: 'selectElem',
   hoveredNode: null,
   selectedElement: null,     // {type:'node'|'beam'|'slab'|..., index}
   selectedElements: [],      // 複数選択用配列 [{type, index}, ...]
@@ -60,6 +60,8 @@ export const state = {
   showGrid: true,
   showDxf: true,
   showLabels: true,
+  showNw: false,             // 💡 Nw表示フラグ
+  showColumnId: true,        // 💡 柱符号表示フラグ
   currentListTab: 'nodes',
   viewMode: 'shape',
   defaultWallMultiplier: 0.0,

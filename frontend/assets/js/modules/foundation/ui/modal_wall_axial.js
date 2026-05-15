@@ -115,7 +115,7 @@ export const showAxialStressTable = function(dataL, dataR) {
         <td style="padding:4px; border:1px solid #444; text-align:center; font-size:9px;">${d.wallId}</td>
         <td style="padding:4px; border:1px solid #444; text-align:center;">${d.alpha}</td>
         <td style="padding:4px; border:1px solid #444;">${Math.round(d.P || 0).toLocaleString()}</td>
-        <td style="padding:4px; border:1px solid #444; font-weight:bold;">${Math.abs(Math.round(d.N || 0)).toLocaleString()}</td>
+        <td style="padding:4px; border:1px solid #444; font-weight:bold;">${Math.round(d.N || 0).toLocaleString()}</td>
         <td style="padding:4px; border:1px solid #444; color:var(--success); font-weight:bold;">${d.M}</td>
       </tr>
     `).join('');
@@ -296,8 +296,8 @@ export const renderAxialElevation = function() {
       forceMap[f][leftP] = forceMap[f][leftP] || { L:0, R:0 };
       forceMap[f][rightP] = forceMap[f][rightP] || { L:0, R:0 };
       
-      forceMap[f][leftP].L -= N_kN; forceMap[f][rightP].L += N_kN;
-      forceMap[f][leftP].R += N_kN; forceMap[f][rightP].R -= N_kN;
+      forceMap[f][leftP].L += N_kN; forceMap[f][rightP].L -= N_kN;
+      forceMap[f][leftP].R -= N_kN; forceMap[f][rightP].R += N_kN;
       
       w._calc_P_N = Math.round(P_kN * 1000);
       w._calc_N_N = Math.round(N_kN * 1000);
@@ -353,7 +353,7 @@ export const renderAxialElevation = function() {
         
         // 最上階（リストの先頭）ならMは「-」とする
         const isTopFloor = (f === floorDataMap[0].floor);
-        const displayM = isTopFloor ? '-' : Math.abs(Math.round(accumulatedN * 1000)).toLocaleString();
+        const displayM = isTopFloor ? '-' : Math.round(accumulatedN * 1000).toLocaleString();
 
         return { 
           axisName: val.crossingLabel || axisName, 
@@ -361,7 +361,7 @@ export const renderAxialElevation = function() {
           wallId: label, 
           alpha, 
           P: localP, 
-          N: isNaN(localN) ? 0 : Math.abs(Math.round(localN)), 
+          N: isNaN(localN) ? 0 : Math.round(localN), 
           M: displayM, 
           leftPos: p 
         };

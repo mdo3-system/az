@@ -50,11 +50,25 @@ export function normalizeColumn(c) {
   return {
     id: c.id || '',
     nodeIndex: c.nodeIndex !== undefined ? parseInt(c.nodeIndex) : -1,
-    force_long: asNum(c.force_long, 0), // 長期軸力
-    ratio_b: asNum(c.ratio_b, 0.5),     // 反曲点高比B
+    nw: asNum(c.nw !== undefined ? c.nw : (c.longTermAxial || c.force_long), 0), // 引張耐力検討用軸力
+    biSetting: c.biSetting || 'auto', // N値計算用 Bi係数 (auto / 0.8 / 0.5)
+    inflectionRatio: asNum(c.inflectionRatio !== undefined ? c.inflectionRatio : (c.ratio_b !== undefined ? c.ratio_b : 0.5), 0.5), // 反曲点高比B
     heightOverride: c.heightOverride || '', // 💡 壁連動階高
     showReport: c.showReport !== false,
-    isCorner: !!c.isCorner
+    
+    // 金物設定 (Top)
+    top_metalMode: c.top_metalMode || 'auto',
+    top_metalId: c.top_metalId || '',
+    top_metalName: c.top_metalName || '',
+    top_metalCap: asNum(c.top_metalCap, 0),
+
+    // 金物設定 (Base)
+    base_metalMode: c.base_metalMode || 'auto',
+    base_metalId: c.base_metalId || '',
+    base_metalName: c.base_metalName || '',
+    base_metalCap: asNum(c.base_metalCap, 0),
+
+    isCorner: !!c.isCorner // 互換性のために保持
   };
 }
 

@@ -486,8 +486,25 @@ export function drawColumns(ctx, fd, hoveredNode, selectedElement, showCol, isSl
     ctx.fillStyle = isSel ? '#ff4500' : '#2c3e50'; ctx.fill();
     ctx.strokeStyle = isSel ? '#fff' : 'rgba(255,255,255,1.0)'; ctx.lineWidth = isSel ? 4 : 1.5;
     ctx.stroke();
-    ctx.font = 'bold 12px Inter, sans-serif'; ctx.fillStyle = '#000000'; ctx.textAlign = 'left';
-    ctx.fillText(c.id, sp.x + drawR + 4, sp.y - drawR - 4);
+    const showNw = (window.state && window.state.showNw);
+    const showId = (window.state && window.state.showColumnId !== false);
+
+    if (showId) {
+      ctx.font = 'bold 12px Inter, sans-serif'; ctx.fillStyle = '#000000'; ctx.textAlign = 'left';
+      ctx.fillText(c.id, sp.x + drawR + 4, sp.y - drawR - 4);
+    }
+    
+    // Nw (引張耐力検討用軸力) の表示
+    if (showNw && c.nw !== undefined && c.nw !== 0) {
+      const nwText = `Nw: ${parseFloat(c.nw).toFixed(2)}kN`;
+      ctx.font = '10px Inter, sans-serif';
+      const tw = ctx.measureText(nwText).width;
+      const tx = sp.x + drawR + 4, ty = sp.y - drawR + 8;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'; ctx.fillRect(tx - 2, ty - 8, tw + 4, 12);
+      ctx.fillStyle = '#2c3e50'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillText(nwText, tx, ty);
+    }
+
     if (c.longTermAxial !== undefined && c.longTermAxial !== "" && c.longTermAxial !== 0) {
       const pText = `ΣP: ${parseFloat(c.longTermAxial).toFixed(3)}`;
       ctx.font = 'bold 12px Inter, sans-serif';

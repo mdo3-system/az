@@ -55,8 +55,29 @@ export const calculateColumnT = window.calculateColumnT = window.calculatePullou
   const targetNode = fd.nodes[nodeIdx];
   if (!targetNode) return { T: 0, metal: '-', ratio: 0, cases: [], criticalCase: { name: '-' } };
 
-  var getBi = function(fCol) {
-    var isCorner = (fCol && (fCol.biSetting === '0.8' || fCol.biSetting == 0.8));
+  var getBi = function(fCol, fData) {
+    if (!fCol) return { top: 0.5, bot: 0.5 };
+    
+    // 手動設定が優先
+    if (fCol.biSetting === '0.8' || fCol.biSetting == 0.8) {
+      return { top: 0.5, bot: 0.8 };
+    }
+    if (fCol.biSetting === '0.5' || fCol.biSetting == 0.5) {
+      return { top: 0.5, bot: 0.5 };
+    }
+
+    // 自動判定 (auto) - ジオメトリから判定
+    const nIdx = fCol.nodeIndex;
+    const walls = (fData.walls || []).filter(w => w.n1 === nIdx || w.n2 === nIdx);
+    if (walls.length === 0) return { top: 0.5, bot: 0.5 };
+
+    // 💡 簡易的な角判定: 1枚しか壁がない（端点）か、異なる方向の壁が2つ以上接している（角）
+    const axes = new Set();
+    walls.forEach(w => {
+      if (w.axisName) axes.add(w.axisName.replace(/通り$/, "").trim());
+    });
+
+    const isCorner = (axes.size >= 2 || walls.length === 1);
     return { top: 0.5, bot: isCorner ? 0.8 : 0.5 };
   };
 
@@ -80,7 +101,7 @@ export const calculateColumnT = window.calculateColumnT = window.calculatePullou
     var fNodeIdx = fCol.nodeIndex;
     var Hi = (fCol.heightOverride || fData.floorHeight || 2730) / 1000;
     
-    var biObj = getBi(fCol);
+    var biObj = getBi(fCol, fData);
     var currentBiTop = biObj.top;
     var currentBiBot = biObj.bot;
 
