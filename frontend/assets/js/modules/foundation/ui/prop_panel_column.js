@@ -54,6 +54,26 @@ export const buildColumnPanel = (el, fd) => {
       </div>
     </div>
 
+    <div style="margin-bottom:12px; padding:8px; background:rgba(231, 76, 60, 0.05); border:1px dashed rgba(231, 76, 60, 0.3); border-radius:4px;">
+      <div style="margin-bottom:6px; color:var(--text-secondary); font-size:11px;"><strong>上階累積軸力 ΣNi (kN) [手入力]:</strong></div>
+      <div style="display:flex; gap:6px;">
+        <div style="flex:1;">
+          <div style="font-size:9px; color:#aaa; margin-bottom:2px;">左加力(+)</div>
+          <input class="prop-value" style="width:100%; border-color:${c.niUpperOverride_L ? '#e74c3c' : 'var(--border)'};" 
+                 type="number" step="0.001" placeholder="加算" autocomplete="off" 
+                 value="${c.niUpperOverride_L || ''}" 
+                 onchange="window.handlePropChange('column', ${index}, 'niUpperOverride_L', this.value)">
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:9px; color:#aaa; margin-bottom:2px;">右加力(-)</div>
+          <input class="prop-value" style="width:100%; border-color:${c.niUpperOverride_R ? '#e74c3c' : 'var(--border)'};" 
+                 type="number" step="0.001" placeholder="加算" autocomplete="off" 
+                 value="${c.niUpperOverride_R || ''}" 
+                 onchange="window.handlePropChange('column', ${index}, 'niUpperOverride_R', this.value)">
+        </div>
+      </div>
+    </div>
+
     <div style="margin-bottom:12px;">
       <div style="margin-bottom:4px; color:var(--text-secondary); font-size:11px;"><strong>基礎梁算定用 反曲点高比 B (0.5):</strong></div>
       <div style="display:flex; align-items:center; gap:8px;">

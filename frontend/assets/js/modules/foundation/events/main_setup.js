@@ -320,7 +320,8 @@ export const setupEventHandlers = function(canvas, state) {
       const overlays = document.querySelectorAll('[id*="modal"], [id*="Modal"]');
       overlays.forEach(el => {
           if (el.id.includes('overlay') || el.id.includes('Modal') || el.id.includes('editor')) {
-              el.remove();
+              if (window.safeRemoveById) window.safeRemoveById(el.id);
+              else if (el.parentNode) el.remove();
           }
       });
       if (window.highlightedSlabIndex !== undefined) window.highlightedSlabIndex = null;
@@ -337,7 +338,11 @@ export const setupEventHandlers = function(canvas, state) {
       if (e.key === 'ArrowDown') { cad.panCanvas(0, -dWorld); handled = true; }
       if (e.key === 'ArrowLeft') { cad.panCanvas(dWorld, 0); handled = true; }
       if (e.key === 'ArrowRight') { cad.panCanvas(-dWorld, 0); handled = true; }
-      if (handled) { e.preventDefault(); cad.callRender(); }
+      if (handled) { 
+        e.preventDefault(); 
+        if (typeof window.callRender === 'function') window.callRender();
+        else if (typeof cad.render === 'function') cad.render();
+      }
     });
   });
 

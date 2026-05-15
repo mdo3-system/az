@@ -169,7 +169,33 @@ export function renderSkewedModelViz(ctx, fd, transform, skewedAxis, belowFd, cu
   const extMaxY = outerMaxY + 1500;
 
   ctx.save();
-  // 💡 背景の建物壁は「耐力壁線図」の視認性を優先するため描画しない
+  // ─── 1. 背景として全ての水平構面を描画 ───
+  if (fd.diaphragms && fd.diaphragms.length > 0) {
+    ctx.save();
+    ctx.globalAlpha = 0.15;
+    ctx.fillStyle = '#7f8c8d';
+    ctx.strokeStyle = '#7f8c8d';
+    ctx.lineWidth = 1;
+    fd.diaphragms.forEach(d => {
+      const pts = (d.nodeIds || []).map(nid => {
+        const n = fd.nodes[nid];
+        if (n) return n;
+        return (fd.nodes || []).find(node => node && (node.id == nid || node.index == nid));
+      }).filter(Boolean);
+      if (pts.length < 3) return;
+
+      ctx.beginPath();
+      pts.forEach((p, i) => {
+        const s = transform.worldToScreen(p.x, p.y);
+        if (i === 0) ctx.moveTo(s.x, s.y);
+        else ctx.lineTo(s.x, s.y);
+      });
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    });
+    ctx.restore();
+  }
 
   const drawLines = (lineGroups, isXDir) => {
     (lineGroups || []).forEach(grp => {

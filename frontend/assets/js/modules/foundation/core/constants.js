@@ -13,9 +13,9 @@ export const HARDWARE_MASTER = [
   { id: 'hdb20', name: 'HD-B20', cap: 20.00 },
   { id: 'hdb25', name: 'HD-B25', cap: 25.00 },
   { id: 'u25', name: 'ビスどめホールダウン金物U25 (U25)', cap: 28.70 },
-  { id: 'u35', name: 'U35', cap: 35.00 },
-  { id: 'hi43', name: 'Hi43', cap: 43.00 },
-  { id: 'hi68', name: 'Hi68', cap: 68.00 },
+  { id: 'u35', name: 'U35', cap: 35.40 },
+  { id: 'hi43', name: 'Hi43', cap: 43.70 },
+  { id: 'hi68', name: 'Hi68', cap: 68.10 },
   { id: 'custom', name: '任意入力', cap: 0.0, isCustom: true }
 ];
 window.HARDWARE_MASTER = HARDWARE_MASTER;

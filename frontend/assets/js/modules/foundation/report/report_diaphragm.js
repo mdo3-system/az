@@ -218,11 +218,34 @@ function _skewDiaphragmSvg(dia, fd, result) {
 
   let svg = `<svg width="100%" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}" xmlns="http://www.w3.org/2000/svg" style="background:#fff; border:1px solid #eee; border-radius:4px; font-family:sans-serif;">`;
   
-  // 1. 構面ポリゴン
-  let polyD = `M ${tx(rotPts[0].x)} ${ty(rotPts[0].y)}`;
-  rotPts.forEach((p, i) => { if(i > 0) polyD += ` L ${tx(p.x)} ${ty(p.y)}`; });
-  polyD += ' Z';
-  svg += `<path d="${polyD}" fill="#f8f9fa" stroke="#ccc" stroke-width="1.2" />`;
+  // 1. 全ての構面ポリゴンを背景として描画
+  if (fd.diaphragms) {
+    fd.diaphragms.forEach(d => {
+      const isCurrent = (d.id === dia.id);
+      const dPts = (d.nodeIds || []).map(nid => fd.nodes[nid]).filter(n => n && typeof n.x === 'number' && typeof n.y === 'number');
+      if (dPts.length < 3) return;
+
+      const dRotPts = dPts.map(p => ({
+        x: p.x * cos - p.y * sin,
+        y: p.x * sin + p.y * cos
+      }));
+
+      let dPolyD = `M ${tx(dRotPts[0].x)} ${ty(dRotPts[0].y)}`;
+      dRotPts.forEach((p, i) => { if(i > 0) dPolyD += ` L ${tx(p.x)} ${ty(p.y)}`; });
+      dPolyD += ' Z';
+
+      const fillColor = isCurrent ? "#f8f9fa" : "#fafafa";
+      const strokeColor = isCurrent ? "#ccc" : "#eee";
+      const opacity = isCurrent ? 1.0 : 0.4;
+
+      svg += `<path d="${dPolyD}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="1.2" fill-opacity="${opacity}" />`;
+      
+      // 構面符号
+      let dmx = 0, dmy = 0; dRotPts.forEach(p => { dmx += p.x; dmy += p.y; });
+      dmx /= dRotPts.length; dmy /= dRotPts.length;
+      svg += `<text x="${tx(dmx)}" y="${ty(dmy)}" font-size="9" fill="${isCurrent ? '#666' : '#bbb'}" text-anchor="middle" font-weight="${isCurrent ? 'bold' : 'normal'}">${d.id || ''}</text>`;
+    });
+  }
 
   // 2. 耐力壁線の描画
   const drawLines = (lines, isVertical) => {
@@ -289,8 +312,9 @@ export const generateDiaphragmReportHtml = window.generateDiaphragmReportHtml = 
         window.calculateDiaphragmProps(dia, fd.nodes);
       }
 
+      const globalShowSkew = (window.state?.showSkewReport !== false);
       const showEquiv = dia.showReportEquiv !== false;
-      const showSkew  = dia.showReportSkew  === true;
+      const showSkew  = (dia.showReportSkew  === true) && globalShowSkew;
       if (!showEquiv && !showSkew) return;
 
       const S = dia.area || 0;

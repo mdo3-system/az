@@ -73,7 +73,7 @@ export const openWallAxialModal = function() {
         <select id="axialAxisSelect" onchange="window.renderAxialElevation()" style="padding:4px 8px; background:var(--bg-input); color:#fff; border:1px solid var(--border); border-radius:4px;">
           ${axisList.map(a => `<option value="${a}">${a}</option>`).join('')}
         </select>
-        <button onclick="{ const el = document.getElementById('wallAxialModal'); if (el) el.remove(); }" style="background:none; border:none; color:#fff; font-size:24px; cursor:pointer; margin-left:15px;">&times;</button>
+        <button onclick="window.safeRemoveById('wallAxialModal')" style="background:none; border:none; color:#fff; font-size:24px; cursor:pointer; margin-left:15px;">&times;</button>
       </div>
     </div>
   `;

@@ -99,7 +99,7 @@ export const makeShortName = (name) => {
     if (n.includes('HD-B15')) return '3';
     if (n.includes('HD-B20')) return '4';
     if (n.includes('HD-B25')) return '5';
-    if (n.includes('U25')) return '25';
+    if (n.includes('U25')) return 'U2';
     if (n.includes('U35')) return 'U3';
     if (n.includes('HI43')) return 'H4';
     if (n.includes('HI68')) return '68';

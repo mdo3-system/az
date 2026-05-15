@@ -1,5 +1,5 @@
 import { floorData, currentFloor, FLOORS } from './foundation_cad.js';
-import { calculateRebarArea, generateOptions, escapeHtml } from './ui_utils.js';
+import { calculateRebarArea, generateOptions, escapeHtml, safeRemoveById } from './ui_utils.js';
 import { handlePropChange, updateSlabFromModal } from './state_manager.js';
 import { saveBeamPopupData, openBeamStressPopup, closeBeamStressPopup, updateBeamSpanProp } from './beam_ui.js';
 import { 
@@ -14,7 +14,7 @@ import { updatePropertyPanel } from './property_panel_builders.js';
 
 // --- Exports ---
 export {
-    calculateRebarArea, generateOptions, escapeHtml,
+    calculateRebarArea, generateOptions, escapeHtml, safeRemoveById,
     handlePropChange, updateSlabFromModal,
     saveBeamPopupData, openBeamStressPopup, closeBeamStressPopup, updateBeamSpanProp,
     openSlabDetailModal, openSlabEditor, closeSlabDetailModal, closeSlabEditor, copySlabCalcToClipboard,
@@ -25,6 +25,8 @@ export {
     generateEnlargedAxialDiagramSvg,
     updatePropertyPanel
 };
+
+window.safeRemoveById = safeRemoveById;
 
 // Global registrations have been moved to state_manager.js
 

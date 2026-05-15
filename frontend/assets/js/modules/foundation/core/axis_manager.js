@@ -81,36 +81,34 @@ export const renameAxis = (dir, idx, newName) => {
     const axes = dir === 'v' ? dxfVAxes : (dir === 'h' ? dxfHAxes : dxfSkewedAxes);
     const axis = axes[idx];
     if (axis) {
-        const oldLabel = axis.label;
         axis.label = newName;
 
-        // 耐力壁の通り芯名更新 (同期)
-        FLOORS.forEach(f => {
-          const fd = floorData[f];
-          if (fd && fd.walls) {
-            fd.walls.forEach(w => {
-              if (w.axisName === oldLabel && oldLabel !== "") {
-                w.axisName = newName;
-              }
-            });
-          }
-          if (fd && fd.beams) {
-            fd.beams.forEach(b => {
-              if (b.axisName === oldLabel && oldLabel !== "") {
-                b.axisName = newName;
-              }
-            });
-          }
+        // 全要素の符号と通り芯名を一括同期
+        import('./grid_manager.js').then(({ syncAllElementSymbols }) => {
+            syncAllElementSymbols();
+            if (typeof window.updatePropertyPanel === 'function') window.updatePropertyPanel();
+            if (typeof window.updateDataList === 'function') window.updateDataList();
+            pushHistory();
+            render();
         });
-        
-        rebuildAllColumnIds(); 
+    }
+};
 
+/**
+ * 全符号と通り芯名の強制同期
+ */
+export const forceSyncAllSymbols = () => {
+    import('./grid_manager.js').then(({ syncAllElementSymbols }) => {
+        syncAllElementSymbols();
+        alert("すべての柱符号および要素の通り芯名を現在のラベルに整合させました。");
         if (typeof window.updatePropertyPanel === 'function') window.updatePropertyPanel();
         if (typeof window.updateDataList === 'function') window.updateDataList();
         pushHistory();
         render();
-    }
+    });
 };
+
+
 
 /**
  * 通り芯の削除

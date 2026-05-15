@@ -45,7 +45,7 @@ export function buildAxisPanel(el) {
         <div style="display:flex; gap:5px; align-items:center;">
           <input type="number" id="axisOffsetDist" placeholder="距離(mm)" value="910" 
                  style="flex:1; background:var(--bg-input); border:1px solid var(--border); color:#fff; padding:5px; border-radius:4px; font-size:12px;">
-          <button onclick="window.addAxisNear('${dir}', ${idx}, document.getElementById('axisOffsetDist').value)" 
+          <button onclick="const d = document.getElementById('axisOffsetDist'); if(d) window.addAxisNear('${dir}', ${idx}, d.value)" 
                   style="background:var(--success); color:#fff; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:11px; white-space:nowrap;">
             <i class="fas fa-plus"></i> 追加
           </button>
@@ -54,7 +54,7 @@ export function buildAxisPanel(el) {
       </div>
 
       <div style="margin-top:20px; padding-top:10px; border-top:1px solid #444;">
-        <button onclick="window.deleteAxis('${dir}', ${idx})" 
+        <button onclick="if(confirm('この通り芯を削除してもよろしいですか？')) window.deleteAxis('${dir}', ${idx})" 
                 style="width:100%; background:#c0392b; color:#fff; border:none; padding:8px; border-radius:4px; cursor:pointer; font-size:12px;">
           <i class="fas fa-trash-alt"></i> この通りを削除
         </button>

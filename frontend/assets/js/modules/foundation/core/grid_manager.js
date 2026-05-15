@@ -59,7 +59,7 @@ function updateIndicesAfterNodeRemoval(floorKey, removedIndex) {
  * 現在の通り芯設定に基づいてノードID（通り芯名）を再生成する
  */
 export function rebuildNodeIds() {
-  const TOL = 20;
+  const TOL = 100; // 💡 20から100に拡大（微小な座標のずれを許容）
   FLOORS.forEach(f => {
     if (!floorData[f] || !floorData[f].nodes) return;
     floorData[f].nodes.forEach(n => {
@@ -189,16 +189,47 @@ export function getAffectedElementsCount(dir, idx) {
 }
 
 /**
- * 全階層の柱IDを再構成
+ * 全階層の全要素（柱、壁、梁等）の符号を現在の通り芯に合わせて再構成する
  */
-export function rebuildAllColumnIds() {
+export function syncAllElementSymbols() {
   rebuildNodeIds();
   FLOORS.forEach(f => {
     const fd = floorData[f];
-    if (!fd || !fd.columns) return;
-    fd.columns.forEach(c => {
-      const node = fd.nodes[c.nodeIndex];
-      if (node && node.id) c.id = node.id.replace(/_[0-9]+$/, "");
+    if (!fd) return;
+
+    // 1. 柱の符号更新
+    if (fd.columns) {
+      fd.columns.forEach(c => {
+        const node = fd.nodes[c.nodeIndex];
+        if (node && node.id) {
+          const newId = node.id.replace(/_[0-9]+$/, "");
+          // 既存のIDが新しいIDを前方一致で含んでいる場合（例: X2Y3b が X2Y3 を含む）、
+          // 接尾辞を保護するために上書きをスキップする
+          if (c.id && c.id.startsWith(newId)) return;
+          c.id = newId;
+        }
+      });
+    }
+
+    // 2. 壁、梁、基礎梁の通り芯名 (axisName) 更新
+    const elements = [...(fd.walls || []), ...(fd.beams || [])];
+    elements.forEach(el => {
+      const n1 = fd.nodes[el.n1];
+      const n2 = fd.nodes[el.n2];
+      if (n1 && n2) {
+        // 通り芯名を最寄りの位置から再取得 (100mm以内)
+        const midX = (n1.x + n2.x) / 2;
+        const midY = (n1.y + n2.y) / 2;
+        const bestAxis = findNearestAxisName(midX, midY, 100);
+        if (bestAxis) el.axisName = bestAxis;
+      }
     });
   });
+}
+
+/**
+ * 全階層の柱IDを再構成 (互換性維持のためのエイリアス)
+ */
+export function rebuildAllColumnIds() {
+  syncAllElementSymbols();
 }

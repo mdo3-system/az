@@ -24,12 +24,12 @@ export function generateHardwarePlanSvg(floorKey, fd, unifiedBbox = null) {
       const pos = w2s(n.x, n.y);
       let tName = '', bName = '';
       const res = window.calculateColumnT ? window.calculateColumnT(idx, fd, floorKey) : null;
-      if (res && res.cases) {
-          res.cases.forEach(c => {
-              const tm = c.topMetal?.name, bm = c.baseMetal?.name;
-              const isReal = (m) => m && m !== '-' && !m.includes('不要') && !m.includes('対象外') && !m.includes('標準');
-              if (isReal(tm)) tName = tm; if (isReal(bm)) bName = bm;
-          });
+      if (res) {
+          const isReal = (m) => m && m !== '-' && !m.includes('不要') && !m.includes('対象外') && !m.includes('標準');
+          const tm = res.topMetal?.name;
+          const bm = res.baseMetal?.name;
+          if (isReal(tm)) tName = tm;
+          if (isReal(bm)) bName = bm;
       }
       const sT = tName ? makeShortName(tName) : '', sB = bName ? makeShortName(bName) : '';
       if (sT || sB) {

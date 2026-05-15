@@ -31,7 +31,7 @@ export {
 
 // --- Re-exports from Grid Manager ---
 export {
-  removeAxis, rebuildNodeIds, rebuildAllColumnIds, findNearestAxisName, addAxis, generateNodesForSkewedAxis, getAffectedElementsCount
+  removeAxis, rebuildNodeIds, rebuildAllColumnIds, syncAllElementSymbols, findNearestAxisName, addAxis, generateNodesForSkewedAxis, getAffectedElementsCount
 } from './core/grid_manager.js';
 
 // --- Local remaining functions ---

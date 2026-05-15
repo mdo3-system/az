@@ -39,6 +39,7 @@ window.getAxisName = Axis.getAxisName;
 window.renameAxis = Axis.renameAxis;
 window.deleteAxis = Axis.deleteAxis;
 window.addAxisNear = Axis.addAxisNear;
+window.forceSyncAllSymbols = Axis.forceSyncAllSymbols;
 window.updateSkewedVizDropdown = Axis.updateSkewedVizDropdown;
 
 // UI Helpers

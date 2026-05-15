@@ -96,3 +96,23 @@ export const makeDraggable = (element, handle) => {
     element.onmousedown = dragMouseDown;
   }
 };
+
+/**
+ * ID指定で安全に要素を削除する
+ */
+export const safeRemoveById = (id) => {
+  if (!id) return;
+  const el = document.getElementById(id);
+  if (el) {
+    try {
+      if (el.parentNode) {
+        el.parentNode.removeChild(el);
+      } else {
+        el.remove();
+      }
+    } catch (e) {
+      // 既に別のプロセス（blurイベント等）で削除されている場合は無視する
+      console.warn('[safeRemoveById] Error during removal (already detached?):', id, e);
+    }
+  }
+};

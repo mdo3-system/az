@@ -4,8 +4,11 @@
 export function showWallSymbolModal(symbols) {
     return new Promise((resolve) => {
         // すでに存在すれば削除
-        const existing = document.getElementById('wallSymbolModal');
-        if (existing) existing.remove();
+        if (window.safeRemoveById) window.safeRemoveById('wallSymbolModal');
+        else {
+            const existing = document.getElementById('wallSymbolModal');
+            if (existing) existing.remove();
+        }
 
         const modal = document.createElement('div');
         modal.id = 'wallSymbolModal';
@@ -93,7 +96,8 @@ export function showWallSymbolModal(symbols) {
             marginRight: '16px', cursor: 'pointer', fontSize: '14px'
         });
         cancelBtn.onclick = () => {
-            modal.remove();
+            if (window.safeRemoveById) window.safeRemoveById('wallSymbolModal');
+            else modal.remove();
             resolve(null);
         };
 
@@ -109,7 +113,8 @@ export function showWallSymbolModal(symbols) {
             for (const sym in mappingInputs) {
                 result[sym] = parseFloat(mappingInputs[sym].value) || 0;
             }
-            modal.remove();
+            if (window.safeRemoveById) window.safeRemoveById('wallSymbolModal');
+            else modal.remove();
             resolve(result);
         };
 

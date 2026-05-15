@@ -96,7 +96,10 @@ export const handlePropChange = (type, arg2, arg3, arg4) => {
     else if (typeof pushHistory === 'function') pushHistory();
 
     if (typeof window.callRender === 'function') window.callRender();
-    if (typeof window.updatePropertyPanel === 'function') window.updatePropertyPanel();
+    if (typeof window.updatePropertyPanel === 'function') {
+        // 💡 NotFoundError 回避のため、描画更新を次フレームへ遅延させる
+        requestAnimationFrame(() => window.updatePropertyPanel());
+    }
     if (typeof window.updateDataList === 'function') window.updateDataList();
     
     // スラブモーダルの再描画（スクロール位置保持）
@@ -117,7 +120,39 @@ export const handlePropChange = (type, arg2, arg3, arg4) => {
     if (existingEditor && typeof window.openSlabEditor === 'function') {
         window.openSlabEditor(index);
     }
+
+    // 💡 柱詳細モーダルの再描画（追加）
+    const existingColModal = document.getElementById('column-modal-overlay');
+    if (existingColModal && typeof window.openColumnDetailModal === 'function' && type === 'column') {
+        window.openColumnDetailModal(index);
+    }
 };
+
+/** 通り芯(軸)ごとの手動補正値を更新する */
+export const handleAxisOverrideChange = function(colIndex, axisName, dir, value) {
+    const fd = floorData[currentFloor];
+    if (!fd || !fd.columns || !fd.columns[colIndex]) return;
+    
+    const col = fd.columns[colIndex];
+    if (!col.axisOverrides) col.axisOverrides = {};
+    if (!col.axisOverrides[axisName]) col.axisOverrides[axisName] = {};
+    
+    // 💡 空文字なら null（自動計算へ戻す）、そうでなければ数値化
+    const val = (value === '' || value === undefined) ? null : parseFloat(value);
+    col.axisOverrides[axisName][dir] = isNaN(val) ? null : val;
+    
+    // 履歴保存とUI更新
+    if (typeof window.pushHistory === 'function') window.pushHistory();
+    if (typeof window.updatePropertyPanel === 'function') {
+        requestAnimationFrame(() => window.updatePropertyPanel());
+    }
+    
+    // モーダル再描画
+    if (typeof window.openColumnDetailModal === 'function') {
+        window.openColumnDetailModal(colIndex);
+    }
+};
+window.handleAxisOverrideChange = handleAxisOverrideChange;
 
 // 互換レイヤー（ポップアップ・モーダル内のハンドラを新パイプラインへ繋ぐ）
 export const updateSlabFromModal = (index, prop, element) => {

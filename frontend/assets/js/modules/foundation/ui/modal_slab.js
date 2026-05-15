@@ -312,17 +312,13 @@ export const openSlabEditor = (index) => {
 };
 
 export const closeSlabDetailModal = () => {
-    const modal = document.getElementById('slab-modal-overlay');
-    if (modal && modal.parentNode) {
-        modal.remove();
-        window.highlightedSlabIndex = null;
-        callRender();
-    }
+    if (window.safeRemoveById) window.safeRemoveById('slab-modal-overlay');
+    window.highlightedSlabIndex = null;
+    if (typeof callRender === 'function') callRender();
 };
 
 export const closeSlabEditor = () => {
-    const modal = document.getElementById('slab-editor-modal');
-    if (modal && modal.parentNode) modal.remove();
+    if (window.safeRemoveById) window.safeRemoveById('slab-editor-modal');
     document.querySelectorAll('.property-panel, #property-panel, .ui-dialog').forEach(el => {
         el.style.visibility = 'visible';
         el.style.pointerEvents = 'auto';

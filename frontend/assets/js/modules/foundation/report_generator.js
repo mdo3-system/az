@@ -148,17 +148,28 @@ export const showCalculationReport = function() {
     modalHeader.insertBefore(printBtn, modalHeader.lastElementChild);
   }
 
+  const showSkewReport = (window.state?.showSkewReport !== false);
   const navHtml = `
-    <div class="no-print" style="position: sticky; top: 0; background: #252a3a; z-index: 1000; border-bottom: 2px solid #5b8afe; padding: 10px; display: flex; flex-wrap: wrap; gap: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.3); margin-bottom:20px;">
-      <a href="#chapter1" style="text-decoration: none; color: #fff; font-size: 11px; padding: 4px 8px; border-radius: 4px; border: 1px solid #444; background: #34495e;">第1章 斜め壁</a>
-      <a href="#chapter2" style="text-decoration: none; color: #fff; font-size: 11px; padding: 4px 8px; border-radius: 4px; border: 1px solid #444; background: #34495e;">第2章 等価面積</a>
-      <a href="#chapter3" style="text-decoration: none; color: #fff; font-size: 11px; padding: 4px 8px; border-radius: 4px; border: 1px solid #444; background: #e67e22; font-weight:bold;">第3章 構面検定</a>
-      <a href="#section5-7" style="text-decoration: none; color: #fff; font-size: 11px; padding: 4px 8px; border-radius: 4px; border: 1px solid #444; background: #34495e;">5-7 引張検定</a>
-      <a href="#chapter4" style="text-decoration: none; color: #fff; font-size: 11px; padding: 4px 8px; border-radius: 4px; border: 1px solid #444; background: #34495e;">第4章 金物伏図</a>
-      <a href="#section5-9" style="text-decoration: none; color: #fff; font-size: 11px; padding: 4px 8px; border-radius: 4px; border: 1px solid #444; background: #34495e;">5-9 アンカー</a>
-      <a href="#section7-1" style="text-decoration: none; color: #fff; font-size: 11px; padding: 4px 8px; border-radius: 4px; border: 1px solid #444; background: #34495e;">7-1 べた基礎</a>
-      <a href="#section7-2" style="text-decoration: none; color: #fff; font-size: 11px; padding: 4px 8px; border-radius: 4px; border: 1px solid #444; background: #34495e;">7-2 基礎梁負担</a>
-      <a href="#section7-3" style="text-decoration: none; color: #fff; font-size: 11px; padding: 4px 8px; border-radius: 4px; border: 1px solid #444; background: #e74c3c;">8. 基礎梁断面検定</a>
+    <div class="no-print" style="position: sticky; top: 0; background: #252a3a; z-index: 1000; border-bottom: 2px solid #5b8afe; padding: 10px; display: flex; flex-wrap: wrap; gap: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.3); margin-bottom:20px; align-items:center;">
+      <div style="display:flex; gap:8px; flex:1;">
+        <a href="#chapter1" style="text-decoration: none; color: #fff; font-size: 11px; padding: 4px 8px; border-radius: 4px; border: 1px solid #444; background: #34495e;">第1章 斜め壁</a>
+        <a href="#chapter2" style="text-decoration: none; color: #fff; font-size: 11px; padding: 4px 8px; border-radius: 4px; border: 1px solid #444; background: #34495e;">第2章 等価面積</a>
+        <a href="#chapter3" style="text-decoration: none; color: #fff; font-size: 11px; padding: 4px 8px; border-radius: 4px; border: 1px solid #444; background: #e67e22; font-weight:bold;">第3章 構面検定</a>
+        <a href="#section5-7" style="text-decoration: none; color: #fff; font-size: 11px; padding: 4px 8px; border-radius: 4px; border: 1px solid #444; background: #34495e;">5-7 引張検定</a>
+        <a href="#chapter4" style="text-decoration: none; color: #fff; font-size: 11px; padding: 4px 8px; border-radius: 4px; border: 1px solid #444; background: #34495e;">第4章 金物伏図</a>
+        <a href="#section5-9" style="text-decoration: none; color: #fff; font-size: 11px; padding: 4px 8px; border-radius: 4px; border: 1px solid #444; background: #34495e;">5-9 アンカー</a>
+        <a href="#section7-1" style="text-decoration: none; color: #fff; font-size: 11px; padding: 4px 8px; border-radius: 4px; border: 1px solid #444; background: #34495e;">7-1 べた基礎</a>
+        <a href="#section7-2" style="text-decoration: none; color: #fff; font-size: 11px; padding: 4px 8px; border-radius: 4px; border: 1px solid #444; background: #34495e;">7-2 基礎梁負担</a>
+        <a href="#section7-3" style="text-decoration: none; color: #fff; font-size: 11px; padding: 4px 8px; border-radius: 4px; border: 1px solid #444; background: #e74c3c;">8. 基礎梁断面検定</a>
+      </div>
+      <div style="background: rgba(255,255,255,0.1); padding: 4px 12px; border-radius: 20px; display: flex; align-items: center; gap: 8px; border: 1px solid rgba(255,255,255,0.2);">
+        <label style="color: #fff; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+          <input type="checkbox" ${showSkewReport ? 'checked' : ''} 
+                 onchange="window.state.showSkewReport = this.checked; requestAnimationFrame(() => window.showCalculationReport());" 
+                 style="cursor: pointer; width: 14px; height: 14px;">
+          斜め軸回転モデルを出力する
+        </label>
+      </div>
     </div>
   `;
 

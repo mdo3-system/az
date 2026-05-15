@@ -49,21 +49,21 @@ export const openWallDetailModal = function(index) {
   content.style.cssText = 'width:90%; max-width:500px; background:#1e1e1e; color:#fff; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.5); display:flex; flex-direction:column; overflow:hidden; border: 1px solid #444; position:fixed;';
   
   content.innerHTML = `
-      <div id="wall-modal-header" style="background:${headerColor}; padding:15px; border-bottom:1px solid #444; display:flex; justify-content:space-between; align-items:center; cursor:grab;">
+        <div id="wall-modal-header" style="background:${headerColor}; padding:15px; border-bottom:1px solid #444; display:flex; justify-content:space-between; align-items:center; cursor:grab;">
         <h3 style="margin:0; font-size:16px; color:#fff; pointer-events:none;">${headerTitle} - プロパティ詳細</h3>
-        <button onclick="{ const el = document.getElementById('wall-modal-overlay'); if (el) el.remove(); }" style="background:none; border:none; color:#fff; font-size:24px; cursor:pointer;">&times;</button>
+        <button onclick="window.safeRemoveById('wall-modal-overlay')" style="background:none; border:none; color:#fff; font-size:24px; cursor:pointer;">&times;</button>
       </div>
       <div style="padding:20px; max-height:80vh; overflow-y:auto;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
           <div style="flex:1;">
             <label style="color:#aaa; font-size:12px;">符号:</label><br>
-            <input value="${w.id || ''}" onchange="window.handlePropChange('wall', ${index}, 'id', this.value); { const el = document.getElementById('wall-modal-overlay'); if (el) el.remove(); }; window.openWallDetailModal(${index});" style="width:100%; padding:8px; background:#333; color:#fff; border:1px solid #555; border-radius:4px;">
+            <input value="${w.id || ''}" onchange="window.handlePropChange('wall', ${index}, 'id', this.value); window.safeRemoveById('wall-modal-overlay'); window.openWallDetailModal(${index});" style="width:100%; padding:8px; background:#333; color:#fff; border:1px solid #555; border-radius:4px;">
           </div>
         </div>
 
         <div style="margin-bottom:15px; padding:12px; background:rgba(91,138,254,0.15); border:1px solid var(--accent); border-radius:8px;">
           <label style="font-size:13px; cursor:pointer; display:flex; align-items:center; gap:10px; color:var(--accent); font-weight:bold;">
-            <input type="checkbox" style="width:20px; height:20px; cursor:pointer;" ${w.isExterior ? 'checked' : ''} onchange="window.handlePropChange('wall', ${index}, 'isExterior', this.checked); { const el = document.getElementById('wall-modal-overlay'); if (el) el.remove(); }; window.openWallDetailModal(${index});">
+            <input type="checkbox" style="width:20px; height:20px; cursor:pointer;" ${w.isExterior ? 'checked' : ''} onchange="window.handlePropChange('wall', ${index}, 'isExterior', this.checked); window.safeRemoveById('wall-modal-overlay'); window.openWallDetailModal(${index});">
             外壁 (外周部) として扱う
           </label>
         </div>
@@ -71,21 +71,21 @@ export const openWallDetailModal = function(index) {
         <div style="display:flex; gap:10px; margin-bottom:12px;">
           <div style="flex:1;">
             <label style="color:#aaa; font-size:12px;">通り名 (axisName):</label><br>
-            <input value="${w.axisName || ''}" onchange="window.handlePropChange('wall', ${index}, 'axisName', this.value); { const el = document.getElementById('wall-modal-overlay'); if (el) el.remove(); }; window.openWallDetailModal(${index});" placeholder="例: X1" style="width:100%; padding:8px; background:#333; color:#fff; border:1px solid #555; border-radius:4px;">
+            <input value="${w.axisName || ''}" onchange="window.handlePropChange('wall', ${index}, 'axisName', this.value); window.safeRemoveById('wall-modal-overlay'); window.openWallDetailModal(${index});" placeholder="例: X1" style="width:100%; padding:8px; background:#333; color:#fff; border:1px solid #555; border-radius:4px;">
           </div>
           <div style="flex:1;">
             <label style="color:#aaa; font-size:12px;">階高 H (mm):</label><br>
-            <input type="number" step="1" value="${w.heightOverride || ''}" placeholder="${fd.floorHeight || 2730}" onchange="window.handlePropChange('wall', ${index}, 'heightOverride', this.value); { const el = document.getElementById('wall-modal-overlay'); if (el) el.remove(); }; window.openWallDetailModal(${index});" style="width:100%; padding:8px; background:#333; color:var(--accent); font-weight:bold; border:1px solid var(--accent); border-radius:4px;">
+            <input type="number" step="1" value="${w.heightOverride || ''}" placeholder="${fd.floorHeight || 2730}" onchange="window.handlePropChange('wall', ${index}, 'heightOverride', this.value); window.safeRemoveById('wall-modal-overlay'); window.openWallDetailModal(${index});" style="width:100%; padding:8px; background:#333; color:var(--accent); font-weight:bold; border:1px solid var(--accent); border-radius:4px;">
           </div>
         </div>
         <div style="display:flex; gap:10px; margin-bottom:12px;">
           <div style="flex:1;">
             <label style="color:#aaa; font-size:12px;">壁倍率:</label><br>
-            <input type="number" step="0.1" min="0" max="7" value="${w.multiplier !== undefined ? w.multiplier : 1.0}" onchange="window.handlePropChange('wall', ${index}, 'multiplier', this.value); { const el = document.getElementById('wall-modal-overlay'); if (el) el.remove(); }; window.openWallDetailModal(${index});" style="width:100%; padding:8px; background:#333; color:#fff; border:1px solid #555; border-radius:4px;">
+            <input type="number" step="0.1" min="0" max="7" value="${w.multiplier !== undefined ? w.multiplier : 1.0}" onchange="window.handlePropChange('wall', ${index}, 'multiplier', this.value); window.safeRemoveById('wall-modal-overlay'); window.openWallDetailModal(${index});" style="width:100%; padding:8px; background:#333; color:#fff; border:1px solid #555; border-radius:4px;">
           </div>
           <div style="flex:1;">
             <label style="color:#aaa; font-size:12px;">設計長 L (mm) ※空欄で実長:</label><br>
-            <input type="number" step="1" placeholder="実長: ${autoL}" value="${w.lengthOverride || ''}" onchange="window.handlePropChange('wall', ${index}, 'lengthOverride', this.value); { const el = document.getElementById('wall-modal-overlay'); if (el) el.remove(); }; window.openWallDetailModal(${index});" style="width:100%; padding:8px; background:#333; color:#fff; border:1px solid #555; border-radius:4px;">
+            <input type="number" step="1" placeholder="実長: ${autoL}" value="${w.lengthOverride || ''}" onchange="window.handlePropChange('wall', ${index}, 'lengthOverride', this.value); window.safeRemoveById('wall-modal-overlay'); window.openWallDetailModal(${index});" style="width:100%; padding:8px; background:#333; color:#fff; border:1px solid #555; border-radius:4px;">
           </div>
         </div>
 
@@ -138,14 +138,14 @@ export const openDiaphragmDetailModal = function(index) {
   content.innerHTML = `
       <div id="diaph-modal-header" style="padding:14px 18px;border-bottom:1px solid #444;display:flex;justify-content:space-between;align-items:center;cursor:grab;background:#2c3e50;">
         <h3 style="margin:0;font-size:15px;pointer-events:none;">🏠 水平構面 ${dia.id || `D-${index+1}`} 詳細</h3>
-        <button onclick="{ const el=document.getElementById('diaph-modal-overlay'); if(el) el.remove(); }" style="background:none;border:none;color:#aaa;font-size:22px;cursor:pointer;">&times;</button>
+        <button onclick="window.safeRemoveById('diaph-modal-overlay')" style="background:none;border:none;color:#aaa;font-size:22px;cursor:pointer;">&times;</button>
       </div>
 
       <div style="padding:14px 18px 0; overflow-y:auto; flex:1;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
           <div style="font-size:12px;color:#aaa;">符号: <strong>${dia.id || ''}</strong> &nbsp; 実面積 S: <span style="color:#0f0;font-weight:bold;">${S.toFixed(3)} m²</span></div>
           <div>
-            <select onchange="window.handlePropChange('diaphragm', ${index}, 'subType', this.value); { const el=document.getElementById('diaph-modal-overlay'); if(el) el.remove(); }; window.openDiaphragmDetailModal(${index});"
+            <select onchange="window.handlePropChange('diaphragm', ${index}, 'subType', this.value); window.safeRemoveById('diaph-modal-overlay'); window.openDiaphragmDetailModal(${index});"
               style="padding:4px 8px; background:#2c3e50; color:#fff; border:1px solid #555; border-radius:4px; font-size:12px;">
               <option value="roof" ${dia.subType === 'roof' ? 'selected' : ''}>屋根</option>
               <option value="floor" ${dia.subType === 'floor' ? 'selected' : ''}>床</option>

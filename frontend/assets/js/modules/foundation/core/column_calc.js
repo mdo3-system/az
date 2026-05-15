@@ -66,19 +66,8 @@ export const calculateColumnT = window.calculateColumnT = window.calculatePullou
       return { top: 0.5, bot: 0.5 };
     }
 
-    // 自動判定 (auto) - ジオメトリから判定
-    const nIdx = fCol.nodeIndex;
-    const walls = (fData.walls || []).filter(w => w.n1 === nIdx || w.n2 === nIdx);
-    if (walls.length === 0) return { top: 0.5, bot: 0.5 };
-
-    // 💡 簡易的な角判定: 1枚しか壁がない（端点）か、異なる方向の壁が2つ以上接している（角）
-    const axes = new Set();
-    walls.forEach(w => {
-      if (w.axisName) axes.add(w.axisName.replace(/通り$/, "").trim());
-    });
-
-    const isCorner = (axes.size >= 2 || walls.length === 1);
-    return { top: 0.5, bot: isCorner ? 0.8 : 0.5 };
+    // 💡 自動判定を廃止し、デフォルトは一律 0.5 (中柱) とする
+    return { top: 0.5, bot: 0.5, wallsCount: 0, axesCount: 0 };
   };
 
   var axisResults = {};
@@ -169,6 +158,7 @@ export const calculateColumnT = window.calculateColumnT = window.calculatePullou
         res.sum_Qair_Hi = qair;
         res.Bi_top = currentBiTop;
         res.Bi_bot = currentBiBot;
+        res.wallsCount = biObj.wallsCount;
       } else {
         res.sum_Ni_upper += deltaPower * currentBiBot;
         res.sum_Td_upper += deltaPower * currentB;
@@ -209,7 +199,17 @@ export const calculateColumnT = window.calculateColumnT = window.calculatePullou
       const sign = d.sign;
       var ni_top_this = res.Ni_top_this * sign;
       var ni_bot_this = res.Ni_bot_this * sign;
-      var ni_upper = res.sum_Ni_upper * sign;
+      var axisOver = (col.axisOverrides || {})[axisName] || {};
+      
+      // 💡 通り芯別の設定があれば最優先、なければ柱全体の共通設定、どちらもなければ null
+      var manualValue = (sign > 0) 
+          ? (axisOver.L !== undefined && axisOver.L !== null ? axisOver.L : (col.niUpperOverride_L || null))
+          : (axisOver.R !== undefined && axisOver.R !== null ? axisOver.R : (col.niUpperOverride_R || null));
+
+      var manualNiUpper = (manualValue !== null && manualValue !== "") ? parseFloat(manualValue) : null;
+      
+      // 💡 入力値があればそれを優先(0でも上書き)、なければ自動計算値を使用
+      var ni_upper = (manualNiUpper !== null && !isNaN(manualNiUpper)) ? manualNiUpper : (res.sum_Ni_upper * sign);
       
       var T_top_raw = (ni_top_this + ni_upper) - reduction;
       var T_bot_raw = (ni_bot_this + ni_upper) - reduction;
@@ -226,6 +226,7 @@ export const calculateColumnT = window.calculateColumnT = window.calculatePullou
         direction: axisDirection, 
         q1_Hi: res.sum_Qail_Hi, q2_Hi: res.sum_Qair_Hi,
         Bi_top: res.Bi_top, Bi_bot: res.Bi_bot,
+        wallsCount: res.wallsCount,
         Ni_top: ni_top_this, Ni_bot: ni_bot_this, Ni_upper: ni_upper,
         totalNi_top: ni_top_this + ni_upper, totalNi_bot: ni_bot_this + ni_upper,
         T_top: T_top_raw, T_bot: T_bot_raw,
@@ -239,19 +240,27 @@ export const calculateColumnT = window.calculateColumnT = window.calculatePullou
     });
   });
 
-  if (cases.length === 0) return { T: 0, metal: '対象外', cases: [], Nw: nw, criticalCase: { name: '対象外' } };
+  if (cases.length === 0) return { T: 0, T_top: 0, metal: '対象外', cases: [], Nw: nw, criticalCase: null, maxTopCase: null, maxBotCase: null };
   
-  var crit = cases[0];
+  // 💡 柱頭と柱脚でそれぞれ最大引張力が発生するケースを個別に特定する
+  var maxTopCase = cases[0];
+  var maxBotCase = cases[0];
   for (var k = 0; k < cases.length; k++) {
-    var cMax = Math.max(cases[k].T_top, cases[k].T_bot);
-    var rMax = Math.max(crit.T_top, crit.T_bot);
-    if (cMax > rMax) crit = cases[k];
+    if (cases[k].T_top > maxTopCase.T_top) maxTopCase = cases[k];
+    if (cases[k].T_bot > maxBotCase.T_bot) maxBotCase = cases[k];
   }
 
   return {
-    T: Math.max(0, crit.T_bot), 
-    T_top: Math.max(0, crit.T_top),
-    Nw: nw, cases: cases, criticalCase: crit, Hi_m: (fd.floorHeight || 2730) / 1000
+    T: Math.max(0, maxBotCase.T_bot), 
+    T_top: Math.max(0, maxTopCase.T_top),
+    Nw: nw, 
+    cases: cases, 
+    criticalCase: (maxBotCase.T_bot >= maxTopCase.T_top) ? maxBotCase : maxTopCase,
+    maxTopCase: maxTopCase,
+    maxBotCase: maxBotCase,
+    topMetal: maxTopCase.topMetal,
+    baseMetal: maxBotCase.baseMetal,
+    Hi_m: (fd.floorHeight || 2730) / 1000
   };
 };
 

@@ -525,33 +525,75 @@ export function drawColumns(ctx, fd, hoveredNode, selectedElement, showCol, isSl
 export function drawGrid(ctx, selectedElement, showGrid) {
   if (!showGrid) return;
   let selAxis = null; if (selectedElement && selectedElement.type === 'axis') selAxis = selectedElement.index;
-  dxfVAxes.forEach((a, i) => {
+
+  const fsize = Math.max(10, Math.round(90 * viewState.scale));
+  ctx.font = `bold ${fsize}px Arial`;
+
+  // 1. 垂直軸 (X方向) - 上下端
+  const sortedV = [...dxfVAxes].map((a, i) => ({ a, i })).sort((p1, p2) => p1.a.x - p2.a.x);
+  let lastSx = -1000, lastTier = 0;
+  sortedV.forEach(({ a, i }) => {
     const isSel = selAxis && selAxis.dir === 'v' && selAxis.index === i;
+    const s = worldToScreen(a.x, 0);
+    const sx = Math.max(20, Math.min(W - 20, s.x));
+    
+    // Tier判定 (重なり防止)
+    let tier = 0;
+    if (Math.abs(s.x - lastSx) < (fsize * 2.5)) {
+      tier = (lastTier + 1) % 2;
+    }
+    const offset = tier * (fsize + 10);
+    
+    // 線分描画
     ctx.beginPath();
     const start = worldToScreen(a.x, -50000), end = worldToScreen(a.x, 50000);
     ctx.moveTo(start.x, start.y); ctx.lineTo(end.x, end.y);
     ctx.strokeStyle = isSel ? '#e74c3c' : '#3498db'; ctx.lineWidth = isSel ? 3 : 1;
     ctx.globalAlpha = isSel ? 1.0 : 0.6; ctx.stroke();
+
     if (a.label) {
-      const s = worldToScreen(a.x, 0); const sx = Math.max(20, Math.min(W - 20, s.x));
-      const fsize = Math.max(10, Math.round(90 * viewState.scale));
-      ctx.font = `${fsize}px Arial`; ctx.fillStyle = ctx.strokeStyle; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-      ctx.fillText(a.label, sx, 20);
+      ctx.fillStyle = ctx.strokeStyle; ctx.textAlign = 'center'; 
+      // 上端
+      ctx.textBaseline = 'top';
+      ctx.fillText(a.label, sx, 10 + offset);
+      // 下端
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(a.label, sx, H - 10 - offset);
     }
+    lastSx = s.x; lastTier = tier;
   });
-  dxfHAxes.forEach((a, i) => {
+
+  // 2. 水平軸 (Y方向) - 左右端
+  const sortedH = [...dxfHAxes].map((a, i) => ({ a, i })).sort((p1, p2) => p2.a.y - p1.a.y); // Yは下が正なのでソート順に注意
+  let lastSy = -1000, lastTierH = 0;
+  sortedH.forEach(({ a, i }) => {
     const isSel = selAxis && selAxis.dir === 'h' && selAxis.index === i;
+    const s = worldToScreen(0, a.y);
+    const sy = Math.max(20, Math.min(H - 20, s.y));
+
+    // Tier判定
+    let tier = 0;
+    if (Math.abs(s.y - lastSy) < (fsize * 1.5)) {
+      tier = (lastTierH + 1) % 2;
+    }
+    const offset = tier * (fsize * 2.5);
+
     ctx.beginPath();
     const start = worldToScreen(-50000, a.y), end = worldToScreen(50000, a.y);
     ctx.moveTo(start.x, start.y); ctx.lineTo(end.x, end.y);
     ctx.strokeStyle = isSel ? '#e74c3c' : '#3498db'; ctx.lineWidth = isSel ? 3 : 1;
     ctx.globalAlpha = isSel ? 1.0 : 0.6; ctx.stroke();
+
     if (a.label) {
-      const s = worldToScreen(0, a.y); const sy = Math.max(20, Math.min(H - 20, s.y));
-      const fsize = Math.max(10, Math.round(90 * viewState.scale));
-      ctx.font = `${fsize}px Arial`; ctx.fillStyle = ctx.strokeStyle; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-      ctx.fillText(a.label, 20, sy);
+      ctx.fillStyle = ctx.strokeStyle; ctx.textBaseline = 'middle';
+      // 左端
+      ctx.textAlign = 'left';
+      ctx.fillText(a.label, 10 + offset, sy);
+      // 右端
+      ctx.textAlign = 'right';
+      ctx.fillText(a.label, W - 10 - offset, sy);
     }
+    lastSy = s.y; lastTierH = tier;
   });
 
   const skewedAxesList = (window.dxfSkewedAxes || dxfSkewedAxes || []);
@@ -572,7 +614,6 @@ export function drawGrid(ctx, selectedElement, showGrid) {
     ctx.setLineDash([]);
     if (ax.label) {
       const sp1 = worldToScreen(ax.p1.x, ax.p1.y);
-      const fsize = Math.max(10, Math.round(90 * viewState.scale));
       ctx.font = `bold ${fsize}px Arial`; ctx.fillStyle = ctx.strokeStyle;
       ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
       ctx.fillText(ax.label, sp1.x, sp1.y - 10);

@@ -68,7 +68,12 @@ export function normalizeColumn(c) {
     base_metalName: c.base_metalName || '',
     base_metalCap: asNum(c.base_metalCap, 0),
 
-    isCorner: !!c.isCorner // 互換性のために保持
+    isCorner: !!c.isCorner, // 互換性のために保持
+    
+    // 手動補正プロパティ (ΣNi) - 軸ごとの詳細設定をサポート
+    niUpperOverride_L: asNum(c.niUpperOverride_L, 0),
+    niUpperOverride_R: asNum(c.niUpperOverride_R, 0),
+    axisOverrides: c.axisOverrides || {} // { "X1": { L: 10, R: 5 }, ... }
   };
 }
 

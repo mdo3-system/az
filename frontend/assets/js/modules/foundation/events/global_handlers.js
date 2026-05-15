@@ -47,7 +47,8 @@ export function handleNwExcelUpload(event) {
             if (!row || row.length === 0) return;
             
             const rawId = row[0] ? String(row[0]).trim() : "";
-            if (rawId && isNaN(parseFloat(rawId))) { 
+            // 💡 数値で始まる符号（2C2c等）も許容するように修正
+            if (rawId && (isNaN(parseFloat(rawId)) || /^[0-9]/.test(rawId))) { 
               lastSeenId = rawId;
             }
             
@@ -100,12 +101,34 @@ export function handleNwExcelUpload(event) {
           });
         }
         
+        const cFloor = currentFloor || window.currentFloor || "1";
+        const floorName = String(cFloor).includes('PH') ? 'PH' : (cFloor + 'F');
         const totalColumns = fd ? fd.columns.length : 0;
-        const reportMsg = `✓ Nw更新: ${matchCount}本 / 全体: ${totalColumns}本 (${currentFloor}F)`;
-        console.log(`[Excel Import] ${reportMsg}`);
+        
+        // 💡 符号が一致しなかった柱を特定
+        const unmatchedIds = [];
+        if (fd && fd.columns) {
+          fd.columns.forEach(col => {
+            const targetId = normalize(col.id || "");
+            if (targetId && normalized_nw[targetId] === undefined) {
+              unmatchedIds.push(col.id || "(不明)");
+            }
+          });
+        }
+
+        const reportMsg = `✓ 符号一致: ${matchCount} / 全体: ${totalColumns} (${floorName})`;
+        
+        console.log(`[Excel Import] ${reportMsg}`, { 
+          matchCount, 
+          totalColumns, 
+          unmatchedCount: unmatchedIds.length,
+          unmatchedList: unmatchedIds 
+        });
+        
         if (statusEl) {
-          statusEl.textContent = reportMsg;
-          statusEl.style.color = (matchCount > 0) ? "var(--success)" : "#f39c12";
+          statusEl.innerHTML = `<strong>${reportMsg}</strong>`;
+          statusEl.style.color = (matchCount === totalColumns && totalColumns > 0) ? "#2ecc71" : "#f39c12"; 
+          statusEl.style.fontSize = "11px";
         }
 
         if (typeof window.pushHistory === 'function') window.pushHistory();

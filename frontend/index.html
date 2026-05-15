@@ -229,7 +229,7 @@
   <div class="topbar">
     <div class="topbar-brand">
       <span class="topbar-logo">AZ斜め壁補助計算Web-CAD</span>
-      <span class="topbar-version" style="margin-left: 8px; font-size: 11px; color: var(--text-secondary); opacity: 0.8;">v3.0.2</span>
+      <span class="topbar-version" style="margin-left: 8px; font-size: 11px; color: var(--text-secondary); opacity: 0.8;">v3.0.38</span>
     </div>
     <div class="topbar-floor-tabs" id="floorTabs">
       <button data-floor="PH">PH階</button>
@@ -287,6 +287,9 @@
         </button>
         <button id="btnDownloadMergedDxf" class="side-btn" style="display:none; background:var(--success); color:white; border:none; padding:8px; font-weight:bold; margin-bottom:15px; width:100%;">
           💾 統合済みDXFをダウンロード
+        </button>
+        <button onclick="window.forceSyncAllSymbols()" class="side-btn" style="background:#546e7a; color:white; border:none; padding:8px; font-weight:bold; margin-bottom:15px; width:100%;" title="すべての柱符号と要素の通り芯名を現在の通り芯ラベルに再整合させます">
+          🔄 全符号を通り芯に強制整合
         </button>
 
         <hr style="border:0; border-top:1px solid var(--border); margin:10px 0;">
