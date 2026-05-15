@@ -496,7 +496,7 @@ export function drawColumns(ctx, fd, hoveredNode, selectedElement, showCol, isSl
     
     // Nw (引張耐力検討用軸力) の表示
     if (showNw && c.nw !== undefined && c.nw !== 0) {
-      const nwText = `Nw: ${parseFloat(c.nw).toFixed(2)}kN`;
+      const nwText = `Nw: ${parseFloat(c.nw).toFixed(3)}kN`;
       ctx.font = '10px Inter, sans-serif';
       const tw = ctx.measureText(nwText).width;
       const tx = sp.x + drawR + 4, ty = sp.y - drawR + 8;

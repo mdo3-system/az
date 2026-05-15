@@ -133,12 +133,12 @@ export const openColumnDetailModal = function(index) {
                   <tr>
                     <td style="border:1px solid #444; padding:4px; text-align:center;">${cs.name.split(' ')[0]}</td>
                     <td style="border:1px solid #444; padding:4px; text-align:center;">${cs.name.split(' ').slice(1).join(' ')}</td>
-                    <td style="border:1px solid #444; padding:4px; text-align:right;">${(cs.q1_Hi || 0).toFixed(2)}</td>
-                    <td style="border:1px solid #444; padding:4px; text-align:right;">${(cs.q2_Hi || 0).toFixed(2)}</td>
+                    <td style="border:1px solid #444; padding:4px; text-align:right;">${(cs.q1_Hi || 0).toFixed(3)}</td>
+                    <td style="border:1px solid #444; padding:4px; text-align:right;">${(cs.q2_Hi || 0).toFixed(3)}</td>
                     <td style="border:1px solid #444; padding:4px; text-align:center;">${(cs.Bi_top || 0.5).toFixed(1)} / ${(cs.Bi_bot || 0.5).toFixed(1)}</td>
-                    <td style="border:1px solid #444; padding:4px; text-align:center;">${(cs.Ni_top || 0).toFixed(2)} / ${(cs.Ni_bot || 0).toFixed(2)}</td>
-                    <td style="border:1px solid #444; padding:4px; text-align:right;">${(cs.Ni_upper || 0).toFixed(2)}</td>
-                    <td style="border:1px solid #444; padding:4px; text-align:right;">${(res.Nw || 0).toFixed(2)}</td>
+                    <td style="border:1px solid #444; padding:4px; text-align:center;">${(cs.Ni_top || 0).toFixed(3)} / ${(cs.Ni_bot || 0).toFixed(3)}</td>
+                    <td style="border:1px solid #444; padding:4px; text-align:right;">${(cs.Ni_upper || 0).toFixed(3)}</td>
+                    <td style="border:1px solid #444; padding:4px; text-align:right;">${(res.Nw || 0).toFixed(3)}</td>
                     <td style="border:1px solid #444; padding:4px; text-align:right; font-weight:bold; color:#5b8afe;">${(cs.T_top || 0).toFixed(3)}</td>
                     <td style="border:1px solid #444; padding:4px; text-align:right; font-weight:bold; color:#f39c12;">${(cs.T_bot || 0).toFixed(3)}</td>
                   </tr>

@@ -114,9 +114,9 @@ export const showAxialStressTable = function(dataL, dataR) {
         <td style="padding:4px; border:1px solid #444; text-align:center;">${d.floor}</td>
         <td style="padding:4px; border:1px solid #444; text-align:center; font-size:9px;">${d.wallId}</td>
         <td style="padding:4px; border:1px solid #444; text-align:center;">${d.alpha}</td>
-        <td style="padding:4px; border:1px solid #444;">${Math.round(d.P || 0).toLocaleString()}</td>
-        <td style="padding:4px; border:1px solid #444; font-weight:bold;">${Math.round(d.N || 0).toLocaleString()}</td>
-        <td style="padding:4px; border:1px solid #444; color:var(--success); font-weight:bold;">${d.M}</td>
+        <td style="padding:4px; border:1px solid #444;">${(d.P || 0).toFixed(3)}</td>
+        <td style="padding:4px; border:1px solid #444; font-weight:bold;">${(d.N || 0).toFixed(3)}</td>
+        <td style="padding:4px; border:1px solid #444; color:var(--success); font-weight:bold;">${(parseFloat(d.M) || 0).toFixed(3)}</td>
       </tr>
     `).join('');
 

@@ -189,10 +189,12 @@ export const setupEventHandlers = function(canvas, state) {
               window.updateDataList?.();
               window.fitAll?.();
               
-              // 全データの正規化
+              // 全データの正規化と符号再生成
               import('../data/data_normalizer.js').then(({ normalizeAllFloors }) => {
                   normalizeAllFloors(floorData);
+                  if (typeof window.rebuildAllColumnIds === 'function') window.rebuildAllColumnIds();
                   pushHistory();
+                  callRender();
               });
           }
           btn.disabled = false; btn.textContent = originalText;
@@ -246,8 +248,11 @@ export const setupEventHandlers = function(canvas, state) {
         updateAllFloorHeightInputs();
         updateAllDiaphragmSpecsInputs();
         window.updatePropertyPanel?.(); window.updateDataList?.();
-        fitAll(); pushHistory();
+        fitAll(); 
+        if (typeof window.rebuildAllColumnIds === 'function') window.rebuildAllColumnIds();
+        pushHistory();
         if (typeof recalcAllTributaries === 'function') recalcAllTributaries();
+        callRender();
         alert('データを復元しました。');
       } catch (err) { alert('JSON読込失敗'); }
       e.target.value = '';
@@ -322,6 +327,18 @@ export const setupEventHandlers = function(canvas, state) {
       callRender();
     }
     if (e.key === 'Delete') handleDeleteSelected(state, floorData[currentFloor]);
+
+    // 💡 復元: 矢印キーでの画面移動（パン）
+    const moveRaw = 20;
+    import('../foundation_cad.js').then(cad => {
+      const dWorld = moveRaw / cad.viewState.scale;
+      let handled = false;
+      if (e.key === 'ArrowUp') { cad.panCanvas(0, dWorld); handled = true; }
+      if (e.key === 'ArrowDown') { cad.panCanvas(0, -dWorld); handled = true; }
+      if (e.key === 'ArrowLeft') { cad.panCanvas(dWorld, 0); handled = true; }
+      if (e.key === 'ArrowRight') { cad.panCanvas(-dWorld, 0); handled = true; }
+      if (handled) { e.preventDefault(); cad.callRender(); }
+    });
   });
 
   setTimeout(() => { window.fitAll?.(); window.callRender?.(); }, 150);

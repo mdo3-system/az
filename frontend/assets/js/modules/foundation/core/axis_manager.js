@@ -102,6 +102,8 @@ export const renameAxis = (dir, idx, newName) => {
             });
           }
         });
+        
+        rebuildAllColumnIds(); 
 
         if (typeof window.updatePropertyPanel === 'function') window.updatePropertyPanel();
         if (typeof window.updateDataList === 'function') window.updateDataList();

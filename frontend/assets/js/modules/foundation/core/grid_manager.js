@@ -63,10 +63,18 @@ export function rebuildNodeIds() {
   FLOORS.forEach(f => {
     if (!floorData[f] || !floorData[f].nodes) return;
     floorData[f].nodes.forEach(n => {
-      let bestVa = dxfVAxes.find(a => Math.abs(a.x - n.x) < TOL);
-      let bestHa = dxfHAxes.find(a => Math.abs(a.y - n.y) < TOL);
+      // 💡 許容範囲内にあるすべての通り芯を抽出し、最も近いものを選択する
+      let vas = dxfVAxes.filter(a => Math.abs(a.x - n.x) < TOL);
+      let has = dxfHAxes.filter(a => Math.abs(a.y - n.y) < TOL);
+      
+      let bestVa = vas.sort((a, b) => Math.abs(a.x - n.x) - Math.abs(b.x - n.x))[0];
+      let bestHa = has.sort((a, b) => Math.abs(a.y - n.y) - Math.abs(b.y - n.y))[0];
+
       if (bestVa && bestHa) {
-        n.id = (bestVa.label && bestHa.label) ? (bestVa.label + bestHa.label) : n.id;
+        n.id = (bestVa.label || "?") + (bestHa.label || "?");
+      } else {
+        // もし軸が見つからない場合は座標から生成
+        n.id = `N_${Math.round(n.x)}_${Math.round(n.y)}`;
       }
     });
   });
