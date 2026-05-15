@@ -249,7 +249,6 @@ export const setupEventHandlers = function(canvas, state) {
         updateAllDiaphragmSpecsInputs();
         window.updatePropertyPanel?.(); window.updateDataList?.();
         fitAll(); 
-        if (typeof window.rebuildAllColumnIds === 'function') window.rebuildAllColumnIds();
         pushHistory();
         if (typeof recalcAllTributaries === 'function') recalcAllTributaries();
         callRender();

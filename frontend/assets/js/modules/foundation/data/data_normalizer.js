@@ -35,6 +35,7 @@ export function normalizeWall(w) {
     multiplier_x: asNum(w.multiplier_x, 0),
     multiplier_y: asNum(w.multiplier_y, 0),
     axisName: w.axisName || '',
+    axis: w.axis || w.axisName || '', // 💡 axisプロパティも保持
     angle: asNum(w.angle, 0),
     length_m: asNum(w.length_m, 0),
     lengthOverride: w.lengthOverride || '',
@@ -85,6 +86,7 @@ export function normalizeBeam(b) {
     n2: b.n2 !== undefined ? parseInt(b.n2) : -1,
     type: b.type || (b.id && b.id.startsWith('FB') ? 'foundation_beam' : 'beam'),
     axisName: b.axisName || b.axis || '',
+    axis: b.axis || b.axisName || '', // 💡 axisプロパティも保持
     depth: asNum(b.depth, 600),   // 梁成 (mm)
     width: asNum(b.width, 150),   // 梁幅 (mm)
     topRebar: b.topRebar || '1-D13',

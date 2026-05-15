@@ -71,10 +71,16 @@ export function rebuildNodeIds() {
       let bestHa = has.sort((a, b) => Math.abs(a.y - n.y) - Math.abs(b.y - n.y))[0];
 
       if (bestVa && bestHa) {
-        n.id = (bestVa.label || "?") + (bestHa.label || "?");
+        const newId = (bestVa.label || "?") + (bestHa.label || "?");
+        // 💡 すでに有効な名前がある場合は上書きしない（自動生成名や"?"を含む場合のみ更新）
+        if (!n.id || n.id.startsWith('N_') || n.id.includes('?')) {
+          n.id = newId;
+        }
       } else {
         // もし軸が見つからない場合は座標から生成
-        n.id = `N_${Math.round(n.x)}_${Math.round(n.y)}`;
+        if (!n.id || n.id.includes('?')) {
+          n.id = `N_${Math.round(n.x)}_${Math.round(n.y)}`;
+        }
       }
     });
   });
@@ -221,7 +227,12 @@ export function syncAllElementSymbols() {
         const midX = (n1.x + n2.x) / 2;
         const midY = (n1.y + n2.y) / 2;
         const bestAxis = findNearestAxisName(midX, midY, 100);
-        if (bestAxis) el.axisName = bestAxis;
+        
+        // 💡 すでに有効な通り芯名がある場合は上書きしない（空または"?"を含む場合のみ更新）
+        if (bestAxis && (!el.axisName || el.axisName.includes('?'))) {
+          el.axisName = bestAxis;
+          el.axis = bestAxis; // 💡 axisプロパティも同期
+        }
       }
     });
   });
