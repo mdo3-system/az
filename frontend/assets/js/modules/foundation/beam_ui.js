@@ -137,6 +137,7 @@ export const openBeamStressPopup = function(type, index) {
           <select onchange="window.saveBeamPopupData('${type}', ${index}, 'calcModel', this.value)" style="padding:4px; background:#333; color:#fff; border:1px solid #555; border-radius:4px; font-size:11px;">
             <option value="span_supports" ${(!beam.calcModel || beam.calcModel === 'span_supports') ? 'selected' : ''}>両端支点連続梁</option>
             <option value="column_supports" ${beam.calcModel === 'column_supports' ? 'selected' : ''}>柱直下支点連続梁</option>
+            <option value="simple_beam" ${beam.calcModel === 'simple_beam' ? 'selected' : ''}>単純梁モデル</option>
           </select>
         </div>
         <div style="text-align:right;">

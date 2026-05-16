@@ -79,6 +79,10 @@ export const generateFoundationHorizontalStressTable = window.generateFoundation
   const fd = floorData['1'];
   if (!fd) return '';
   
+  if (beam.calcModel === 'simple_beam') {
+    return generateFoundationSimpleBeamStressTable(beam, type, index, isPrinting);
+  }
+  
   const data = calculateFoundationHorizontalStressData(fd, beam, '1', floorData, FLOORS, beam.calcModel || 'span_supports');
   if (!data) return '';
   
@@ -384,6 +388,99 @@ export const generateFoundationHorizontalStressTable = window.generateFoundation
 };
 
 /**
+ * 単純梁モデル（柱間モデル）の計算表を生成する
+ */
+export const generateFoundationSimpleBeamStressTable = function(beam, type, index, isPrinting = false) {
+  const fd = floorData['1'];
+  if (!fd) return '';
+  const data = calculateFoundationHorizontalStressData(fd, beam, '1', floorData, FLOORS, 'simple_beam');
+  if (!data) return '';
+
+  const { points, resL, resR } = data;
+  const styles = {
+    bgPanel: isPrinting ? '#fff' : 'rgba(0,0,0,0.25)',
+    border: isPrinting ? '#000' : '#555',
+    headerBg: isPrinting ? '#eee' : '#34495e',
+    headerBg2: isPrinting ? '#f5f5f5' : '#2c3e50',
+    rowBg: isPrinting ? '#fff' : 'rgba(255,255,255,0.02)',
+    text: isPrinting ? '#000' : '#fff',
+    accent: isPrinting ? '#d35400' : '#e67e22',
+    longM: isPrinting ? '#000' : '#f1c40f'
+  };
+  const borderStyle = `border:1px solid ${styles.border};`;
+  const padding = "padding: 6px 4px;";
+
+  const getWallId = (n1, n2) => {
+    const wall = (fd.walls || []).find(w => 
+      (w.n1 === n1 && w.n2 === n2) || (w.n1 === n2 && w.n2 === n1)
+    );
+    return wall ? `|${points.find(p=>p.nodeIndex===n1)?.id || '?'}-${points.find(p=>p.nodeIndex===n2)?.id || '?'}|` : null;
+  };
+
+  const generateRows = (results) => {
+    let rowsHtml = '';
+    for (let i = 0; i < points.length - 1; i++) {
+      const p1 = points[i];
+      const p2 = points[i+1];
+      const L = (p2.dist - p1.dist) / 1000;
+      const lTd = results[i].Td || 0;
+      const rTd = results[i+1].Td || 0;
+      
+      const wallName = getWallId(p1.nodeIndex, p2.nodeIndex);
+      const spanName = wallName || `${p1.id}-${p2.id}`;
+      
+      // M水 = (lTd - rTd) * L * 0.5 (耐力壁区間のみ)
+      const M_water = wallName ? Math.abs((lTd - rTd) * L * 0.5) : 0;
+      const Qe = results[i].Qe || 0;
+      const lMwf = results[i].M_f || 0;
+      const rMwf = results[i+1].M_f || 0;
+
+      rowsHtml += `
+        <tr style="background:${i % 2 === 0 ? styles.rowBg : 'none'}; text-align:right;">
+          <td style="${padding} ${borderStyle} text-align:center;">${spanName}</td>
+          <td style="${padding} ${borderStyle}">${L.toFixed(3)}</td>
+          <td style="${padding} ${borderStyle}">${lTd.toFixed(3)}</td>
+          <td style="${padding} ${borderStyle}">${rTd.toFixed(3)}</td>
+          <td style="${padding} ${borderStyle} font-weight:bold; color:${styles.longM};">${M_water > 0 ? M_water.toFixed(3) : '-'}</td>
+          <td style="${padding} ${borderStyle}">${Qe.toFixed(3)}</td>
+          <td style="${padding} ${borderStyle}">${lMwf.toFixed(3)}</td>
+          <td style="${padding} ${borderStyle}">${rMwf.toFixed(3)}</td>
+        </tr>
+      `;
+    }
+    return rowsHtml;
+  };
+
+  const stressTable = `
+    <div style="margin-top:25px; padding:15px; background:${styles.bgPanel}; border-radius:10px; border:1px solid ${styles.border}; width:100%; box-sizing:border-box;">
+      <div style="color:${styles.accent}; font-weight:bold; font-size:14px; margin-bottom:12px; border-bottom:1px solid ${styles.border}; padding-bottom:8px;">
+        📊 応力の算定（水平荷重時） &nbsp; <span style="background:${styles.accent}; color:#fff; padding:2px 8px; border-radius:4px; font-size:11px;">単純梁モデル</span>
+      </div>
+      <table style="width:100%; border-collapse:collapse; font-size:10px; color:${styles.text}; table-layout: fixed;">
+        <thead>
+          <tr style="background:${styles.headerBg};"><th colspan="8" style="${borderStyle}">地震時：左加力</th></tr>
+          <tr style="background:${styles.headerBg2};">
+            <th style="${borderStyle}">柱間</th><th style="${borderStyle}">長さ(m)</th><th style="${borderStyle}">lTd(kN)</th><th style="${borderStyle}">rTd(kN)</th>
+            <th style="${borderStyle}">M水(kN·m)</th><th style="${borderStyle}">Qe(kN)</th><th style="${borderStyle}">lMw f(kN·m)</th><th style="${borderStyle}">rMw f(kN·m)</th>
+          </tr>
+        </thead>
+        <tbody>${generateRows(resL)}</tbody>
+        <thead style="margin-top:10px;">
+          <tr style="background:${styles.headerBg};"><th colspan="8" style="${borderStyle}">地震時：右加力</th></tr>
+          <tr style="background:${styles.headerBg2};">
+            <th style="${borderStyle}">柱間</th><th style="${borderStyle}">長さ(m)</th><th style="${borderStyle}">lTd(kN)</th><th style="${borderStyle}">rTd(kN)</th>
+            <th style="${borderStyle}">M水(kN·m)</th><th style="${borderStyle}">Qe(kN)</th><th style="${borderStyle}">lMw f(kN·m)</th><th style="${borderStyle}">rMw f(kN·m)</th>
+          </tr>
+        </thead>
+        <tbody>${generateRows(resR)}</tbody>
+      </table>
+    </div>
+  `;
+
+  return stressTable;
+};
+
+/**
  * 8. 基礎梁の断面と配筋の検定 HTML を生成する
  */
 export const generateFoundationBeamReportHtml = window.generateFoundationBeamReportHtml = function(fd1) {
@@ -412,7 +509,7 @@ export const generateFoundationBeamReportHtml = window.generateFoundationBeamRep
       </h2>
       <div style="background: #fffcfc; border: 1px solid #e67e22; padding: 12px; margin-bottom: 20px; font-size: 12px; border-radius: 4px; color: #333; line-height: 1.6;">
         <strong>【基礎梁検定の算定根拠】</strong><br>
-        本章の検定表は、各梁のプロパティで設定された計算モデル（両端支点 / 柱直下支点）に基づき算定されています。<br>
+        本章の検定表は、各梁のプロパティで設定された計算モデル（両端支点 / 柱直下支点 / 単純梁）に基づき算定されています。<br>
         ①荷重の算定 / ②応力の算定（短期） / ③許容耐力(1)：主筋 / ④許容耐力(2)：せん断補強筋 / ⑤判定
       </div>
   `;
