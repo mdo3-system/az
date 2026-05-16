@@ -152,7 +152,7 @@ export const generateFoundationHorizontalStressTable = window.generateFoundation
     <div style="margin-top:25px; padding:15px; background:${styles.bgPanel}; border-radius:10px; border:1px solid ${styles.border}; width:100%; box-sizing:border-box;">
       ${slabInfoHtml}
       <div style="color:${styles.accent}; font-weight:bold; font-size:14px; margin-bottom:12px; display:flex; align-items:center; gap:10px; border-bottom:1px solid ${styles.border}; padding-bottom:8px;">
-        <span style="font-size:18px;">📊</span> 応力の算定（水平荷重時） ${isColumnModel ? '柱直下支点連続梁モデル' : `反曲点高比 B = ${bText}`}
+        <span style="font-size:18px;">📊</span> 応力の算定（水平荷重時） &nbsp; <span style="background:${styles.accent}; color:#fff; padding:2px 8px; border-radius:4px; font-size:11px;">${isColumnModel ? '柱直下支点連続梁モデル' : '両端支点連続梁モデル'}</span> &nbsp; ${isColumnModel ? '' : `反曲点高比 B = ${bText}`}
       </div>
       <div style="overflow-x:auto;">
         <table style="width:100%; border-collapse:collapse; font-size:${isPrinting?'9px':'11px'}; color:${styles.text}; min-width:${isPrinting?'unset':'900px'}; table-layout: fixed;">
@@ -332,7 +332,7 @@ export const generateFoundationHorizontalStressTable = window.generateFoundation
 
   const resultMatrix = `
     <div style="margin-top:25px; border-top:1px solid ${styles.border}; padding-top:20px; color:${styles.text};">
-      <h4 style="color:${styles.accent}; margin-bottom:15px; border-left:4px solid ${styles.accent}; padding-left:10px;">📉 両端支点連続梁モデル</h4>
+      <h4 style="color:${styles.accent}; margin-bottom:15px; border-left:4px solid ${styles.accent}; padding-left:10px;">📉 ${isColumnModel ? '柱直下支点連続梁モデル' : '両端支点連続梁モデル'} による断面検定</h4>
       
       <p style="color:${styles.textDim}; font-size:${isPrinting?'9px':'10px'}; margin-bottom:4px;">[表1] 荷重の算定 (長期・スラブ負担荷重)</p>
       <table style="width:100%; border-collapse:collapse; font-size:${isPrinting?'9px':'10px'}; border:${isPrinting?'1px solid #000':'1px solid #555'}; text-align:center; margin-bottom:20px;">
@@ -412,7 +412,7 @@ export const generateFoundationBeamReportHtml = window.generateFoundationBeamRep
       </h2>
       <div style="background: #fffcfc; border: 1px solid #e67e22; padding: 12px; margin-bottom: 20px; font-size: 12px; border-radius: 4px; color: #333; line-height: 1.6;">
         <strong>【基礎梁検定の算定根拠】</strong><br>
-        本章の検定表は、以下の5ステップで構成されています：<br>
+        本章の検定表は、各梁のプロパティで設定された計算モデル（両端支点 / 柱直下支点）に基づき算定されています。<br>
         ①荷重の算定 / ②応力の算定（短期） / ③許容耐力(1)：主筋 / ④許容耐力(2)：せん断補強筋 / ⑤判定
       </div>
   `;
