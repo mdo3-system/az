@@ -1,6 +1,23 @@
 // core/constants.js
 
-// --- 金物マスターデータ (Hardware Master: Ra値は Jozan Ryusui氏指定の正確な許容耐力) ---
+export const APP_VERSION = '3.1.0';
+
+/**
+ * 許容誤差 (Tolerances)
+ * 単位: mm
+ */
+export const TOLERANCES = {
+  GRID_MATCH: 5,       // グリッド整合判定用 (全符号整合時など)
+  STRUCTURAL_CONN: 50, // 構造的な接続判定用 (一般的なノード間)
+  WALL_CONN: 10,       // 耐力壁の接合判定用 (柱・ノードへの吸着)
+  CALC_EPSILON: 1.0,   // 計算判定時の微小バッファ (左右判定など)
+  COORD_PRECISION: 0.001 // 座標計算の丸め精度
+};
+
+// 💡 互換性のためのエイリアス
+export const STRESS_TOLERANCE = TOLERANCES.STRUCTURAL_CONN;
+
+// --- 金物マスターデータ (Hardware Master) ---
 export const HARDWARE_MASTER = [
   { id: 'none', name: '（不要／標準金物）', cap: 0.0 },
   { id: 'cpl', name: 'L字型かど金物 (CP-L)', cap: 3.38 },
@@ -18,24 +35,24 @@ export const HARDWARE_MASTER = [
   { id: 'hi68', name: 'Hi68', cap: 68.10 },
   { id: 'custom', name: '任意入力', cap: 0.0, isCustom: true }
 ];
-window.HARDWARE_MASTER = HARDWARE_MASTER;
 
-// --- アンカーボルト許容せん断耐力マスター (Jozan Ryusui氏指定値) ---
+// --- アンカーボルト許容せん断耐力マスター ---
 export const ANCHOR_BOLT_MASTER = {
   J1: { m12: 9.180, m16: 16.320 },
   J2: { m12: 8.620, m16: 15.330 },
   J3: { m12: 8.020, m16: 14.260 }
 };
-window.ANCHOR_BOLT_MASTER = ANCHOR_BOLT_MASTER;
-
-// 計算時の許容誤差（距離や応力の微小誤差判定用）
-export const STRESS_TOLERANCE = 50;
 
 /**
  * 2つの座標がほぼ同一地点（許容誤差eps以内）か判定する
  */
-export function isSamePoint(p1, p2, eps = STRESS_TOLERANCE) {
+export function isSamePoint(p1, p2, eps = TOLERANCES.STRUCTURAL_CONN) {
   if (!p1 || !p2) return false;
   return Math.hypot(p1.x - p2.x, p1.y - p2.y) < eps;
 }
+
+// グローバル公開 (移行用)
+window.HARDWARE_MASTER = HARDWARE_MASTER;
+window.ANCHOR_BOLT_MASTER = ANCHOR_BOLT_MASTER;
 window.isSamePoint = isSamePoint;
+window.TOLERANCES = TOLERANCES;

@@ -13,6 +13,7 @@
 
 import { calcSkewedDiaphragmModel } from '../core/diaphragm_skew_calc.js';
 import { getFloorBelow } from '../foundation_cad.js';
+import { calculateDiaphragmProps } from '../core/slab_calc.js';
 
 // ── 共通スタイル ────────────────────────────────────────────────────────────
 const TD  = 'border:1px solid #333;padding:8px 10px;';
@@ -159,7 +160,8 @@ function _skewSection(dia, fd, skewAxes, floorSpecs, currentFloor, allFloorData)
     hasIntermediateWall: dia.hasIntermediateWall || false,
     skewedAxis: ax,
     floorSpecs: floorSpecs,
-    floorKey: currentFloor
+    floorKey: currentFloor,
+    allSkewedAxes: skewAxes // 💡 明示的に渡す
   });
 
   if (!result) {
@@ -296,6 +298,9 @@ function _skewDiaphragmSvg(dia, fd, result) {
 export const generateDiaphragmReportHtml = window.generateDiaphragmReportHtml = function(allFloorData) {
   const skewAxes = window.dxfSkewedAxes || [];
   const floorKeys = Object.keys(allFloorData || {}).sort((a, b) => b.localeCompare(a));
+  
+  // 等価プロパティを一括最新化
+  calculateDiaphragmProps(allFloorData, floorKeys);
 
   let bodyHtml = '';
 
@@ -307,11 +312,6 @@ export const generateDiaphragmReportHtml = window.generateDiaphragmReportHtml = 
     let floorHtml = '';
 
     diaphs.forEach((dia, idx) => {
-      // 等価プロパティを最新化
-      if (typeof window.calculateDiaphragmProps === 'function') {
-        window.calculateDiaphragmProps(dia, fd.nodes);
-      }
-
       const globalShowSkew = (window.state?.showSkewReport !== false);
       const showEquiv = dia.showReportEquiv !== false;
       const showSkew  = (dia.showReportSkew  === true) && globalShowSkew;

@@ -46,12 +46,12 @@ export const showCalculationReport = function() {
              (typeof floorData !== 'undefined' ? floorData[fk] : null);
              
   if (!fd) {
-      console.warn('基礎階のデータが見つかりません。');
+      console.warn('基礎階(1)のデータが見つかりません。');
       return;
   }
 
   // 5-9 アンカーボルトと土台の検定 HTML
-  const anchorTableHtml = window.generateAnchorBoltReportHtml ? window.generateAnchorBoltReportHtml(fd, ANCHOR_BOLT_MASTER) : '';
+  const anchorTableHtml = window.generateAnchorBoltReportHtml ? window.generateAnchorBoltReportHtml(fd, ANCHOR_BOLT_MASTER, allFloorData, FLOORS) : '';
 
   const footerHtml = `
     <div style="font-size: 10px; color: #333; line-height: 1.6; font-family: 'MS Gothic', 'Courier New', monospace; border: 1px solid #000; padding: 15px; background: #fff; page-break-inside: avoid; margin-top: 30px;">

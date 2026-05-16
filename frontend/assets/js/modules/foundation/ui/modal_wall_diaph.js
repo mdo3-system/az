@@ -1,5 +1,4 @@
-// ui/modal_wall_diaph.js
-import { floorData, currentFloor, getFloorBelow } from '../foundation_cad.js';
+import { floorData, currentFloor, getFloorBelow, FLOORS } from '../foundation_cad.js';
 import { calcSkewedDiaphragmModel } from '../core/diaphragm_skew_calc.js';
 import { renderSkewedModelViz } from '../rendering/exterior_wall_viz.js';
 import { makeDraggable } from '../ui_utils.js';
@@ -118,7 +117,7 @@ export const openDiaphragmDetailModal = function(index) {
   if (!fd || !fd.diaphragms || !fd.diaphragms[index]) return;
   const dia = fd.diaphragms[index];
 
-  calculateDiaphragmProps(); // 全体再計算
+  calculateDiaphragmProps(floorData, FLOORS); // 全体再計算
 
   const S = dia.area || 0;
   const skewAxes = window.dxfSkewedAxes || [];
@@ -238,7 +237,8 @@ function _renderSkewResult(index) {
     diaphragm: dia, allDiaphragms: fd.diaphragms, nodes: fd.nodes,
     walls: wallFd.walls, wallNodes: wallFd.nodes, // 💡 追加
     skewedAxis: skewAxes[axIdx], hasIntermediateWall: dia.hasIntermediateWall || false, floorSpecs: floorSpecs,
-    floorKey: currentFloor
+    floorKey: currentFloor,
+    allSkewedAxes: skewAxes // 💡 追加
   });
   if (!result) return;
 

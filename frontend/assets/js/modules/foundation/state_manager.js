@@ -1,9 +1,9 @@
-// state_manager.js - 状態変更とデータ同期の一元管理
 import { floorData, currentFloor, pushHistory } from './foundation_cad.js';
 import { 
     normalizeWall, normalizeColumn, normalizeBeam, 
     normalizeSlab, normalizeDiaphragm 
 } from './data/data_normalizer.js';
+import AppEventBus from './core/event_bus.js';
 
 export const handlePropChange = (type, arg2, arg3, arg4) => {
     let index, prop, value;
@@ -74,33 +74,14 @@ export const handlePropChange = (type, arg2, arg3, arg4) => {
         targetArray[index] = normalizeFn(targetObj);
     }
 
-    // --- 依存する再計算のトリガー ---
-    if (['slab', 'slabs'].includes(type)) {
-        if (typeof window.syncSlabDataToBeams === 'function') window.syncSlabDataToBeams();
-        
-        // 💡 断面検定用の一元化ロジックを実行（aijDataのみを更新）
-        if (typeof window.calculateAndSetSlabAIJStress === 'function') {
-            window.calculateAndSetSlabAIJStress(targetArray[index], fd.nodes);
-        }
-    }
-
-    // 基礎梁の応力再計算（水平荷重時）
-    if (['beam', 'perimeterBeam', 'perimeterbeam'].includes(type)) {
-        if (typeof window.updateAllBeamsShortTermStress === 'function') {
-            window.updateAllBeamsShortTermStress(fd);
-        }
-    }
-
     // --- UI更新と履歴保存 ---
+    AppEventBus.emit('ELEMENT_CHANGED', { type, index, prop, value });
+
     if (typeof window.pushHistory === 'function') window.pushHistory();
     else if (typeof pushHistory === 'function') pushHistory();
 
-    if (typeof window.callRender === 'function') window.callRender();
-    if (typeof window.updatePropertyPanel === 'function') {
-        // 💡 NotFoundError 回避のため、描画更新を次フレームへ遅延させる
-        requestAnimationFrame(() => window.updatePropertyPanel());
-    }
-    if (typeof window.updateDataList === 'function') window.updateDataList();
+    AppEventBus.emit('DATA_SYNC_REQUIRED', { type, fd });
+    AppEventBus.emit('UI_REFRESH_REQUIRED', { type, index });
     
     // スラブモーダルの再描画（スクロール位置保持）
     const existingModal = document.getElementById('slab-modal-overlay');
@@ -227,10 +208,8 @@ export const updateFloorHeight = function(floorKey, val) {
   const fd = floorData[floorKey];
   if (fd) {
     fd.floorHeight = parseInt(val) || 2730;
-    if (typeof window.updatePropertyPanel === 'function') window.updatePropertyPanel();
-    if (typeof window.updateDataList === 'function') window.updateDataList();
-    if (typeof window.recalcAllTributaries === 'function') window.recalcAllTributaries();
-    callRender();
+    AppEventBus.emit('DATA_SYNC_REQUIRED', { type: 'floor_height', floorKey });
+    AppEventBus.emit('UI_REFRESH_REQUIRED', { type: 'floor_height' });
   }
 };
 
@@ -283,15 +262,8 @@ export const updateGlobalDesignSettings = function() {
 
   console.log(`[Global Settings] Updated: Fc=${fcVal}, SD=${sdVal} -> ft=${ft_long}, fs=${fs_long}`);
   
-  if (typeof window.syncSlabDataToBeams === 'function') {
-    window.syncSlabDataToBeams(); 
-  } else if (typeof window.updateAllBeamsShortTermStress === 'function') {
-    window.updateAllBeamsShortTermStress(fd);
-  }
-  
-  callRender();
-  if (typeof window.updatePropertyPanel === 'function') window.updatePropertyPanel();
-  if (typeof window.updateDataList === 'function') window.updateDataList();
+  AppEventBus.emit('DATA_SYNC_REQUIRED', { type: 'global_settings', fd });
+  AppEventBus.emit('UI_REFRESH_REQUIRED', { type: 'global_settings' });
 };
 
 /**
@@ -316,8 +288,7 @@ export const updateGlobalDiaphragmSpecs = function(floorKey, subType, val) {
     fd1.globalDiaphragmSpecs[floorKey][subType] = parsed;
   }
   
-  callRender();
-  if (typeof window.updatePropertyPanel === 'function') window.updatePropertyPanel();
+  AppEventBus.emit('UI_REFRESH_REQUIRED', { type: 'diaph_specs' });
 };
 
 /**
@@ -362,7 +333,7 @@ export const updateAnchorBoltProp = function(axisName, field, value) {
   if (field === 'm12') fd.anchorBolts[axisName].m12 = parseInt(value) || 0;
   if (field === 'm16') fd.anchorBolts[axisName].m16 = parseInt(value) || 0;
   
-  callRender();
+  AppEventBus.emit('UI_REFRESH_REQUIRED', { type: 'anchor_bolt' });
 };
 
 /**
@@ -413,5 +384,5 @@ export const handleMultiPropChange = function(field, value) {
       handlePropChange(type, index, field, value);
     });
   }
-  callRender();
+  AppEventBus.emit('UI_REFRESH_REQUIRED', { type: 'multi_select' });
 };

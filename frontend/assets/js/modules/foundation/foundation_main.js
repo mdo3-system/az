@@ -30,6 +30,26 @@ import './state_manager.js';
 import './core/axis_manager.js';
 import './events/global_bridge.js';
 import './stress_display.js';
+import AppEventBus from './core/event_bus.js';
+import AppTestRunner from './core/test_runner.js';
+
+// --- テストスイートのロード ---
+import './core/tests/column_calc_test.js';
+import './core/tests/beam_calc_test.js';
+import './core/tests/slab_calc_test.js';
+import './core/tests/diaphragm_skew_calc_test.js';
+
+// --- 基盤機能のグローバル登録 ---
+window.AppEventBus = AppEventBus;
+window.AppTestRunner = AppTestRunner;
+
+import { initCalculationListeners } from './core/events/calculation_listeners.js';
+import { initUIListeners } from './core/events/ui_listeners.js';
+initCalculationListeners();
+initUIListeners();
+
+console.log('%c🏗 AZ Structural CAD v3.1.0 Refactoring Phase 1', 'color: #e67e22; font-weight: bold;');
+console.log('Type %cAppTestRunner.runAll()%c to run unit tests.', 'color: #3498db; font-weight: bold;', 'color: inherit;');
 import { 
   floorData, FLOORS, currentFloor, setFloor, render, 
   findSnapNode, findBeamNear, findSlabAt, findDiaphragmAt, pushHistory, undo, redo,

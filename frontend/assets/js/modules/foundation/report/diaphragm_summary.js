@@ -1,9 +1,11 @@
-/**
- * report/diaphragm_summary.js
- * 第2章：水平構面等価面積 (形状低減係数ηの算定) HTML生成モジュール
- */
+import { calculateDiaphragmProps } from '../core/slab_calc.js';
 
 export const generateDiaphragmSummaryHtml = function(allFloorData) {
+  const revFloorKeys = Object.keys(allFloorData || {}).sort((a,b) => b.localeCompare(a));
+  
+  // 等価プロパティを一括最新化
+  calculateDiaphragmProps(allFloorData, revFloorKeys);
+
   let chap2Html = `
     <div id="chapter2" class="chapter-section">
       <h2 style="font-size: 18px; border-left: 8px solid #e67e22; padding-left: 15px; border-bottom: 2px solid #333; padding-bottom: 5px; margin-bottom: 20px; color: #000;">
@@ -14,8 +16,6 @@ export const generateDiaphragmSummaryHtml = function(allFloorData) {
         本章では、不整形な水平構面を長方形に置き換えて評価します。実面積 $S$、最大幅 $B_{max}$ に対し、等価奥行 $L_{eq} = S / B_{max}$ と定義することで、描画される面積が実面積 $S$ と数学的に一致することを保証しています。
       </div>`;
 
-  const revFloorKeys = Object.keys(allFloorData || {}).sort((a,b) => b.localeCompare(a));
-
   for (const fk of revFloorKeys) {
     const fd = allFloorData[fk];
     const diaphragms = fd.diaphragms || [];
@@ -25,9 +25,6 @@ export const generateDiaphragmSummaryHtml = function(allFloorData) {
     let floorRowsHtml = "";
 
     diaphragms.forEach((dia, idx) => {
-      if (typeof window.calculateDiaphragmProps === 'function') {
-        window.calculateDiaphragmProps(dia, fd.nodes);
-      }
       
       const ex = dia.eta_x || 1.0;
       const ey = dia.eta_y || 1.0;

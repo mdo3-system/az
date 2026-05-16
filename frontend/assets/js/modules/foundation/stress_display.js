@@ -1,4 +1,4 @@
-import { floorData, currentFloor } from './foundation_cad.js';
+import { floorData, currentFloor, FLOORS } from './foundation_cad.js';
 // 💡 既存の計算関数を calc.js からインポート
 import { calculateFoundationHorizontalStressData } from './foundation_calc.js';
 
@@ -12,7 +12,7 @@ export const drawBeamStressOnCanvas = function(canvasId, beam, isPrinting = fals
   const canvas = (typeof canvasId === 'string') ? document.getElementById(canvasId) : canvasId;
   if (!canvas || !(canvas instanceof HTMLCanvasElement)) return;
   const fd = floorData['1'];
-  const data = calculateFoundationHorizontalStressData(beam, fd);
+  const data = calculateFoundationHorizontalStressData(beam, fd, '1', floorData, FLOORS);
   if (!data) return;
 
   const ctx = canvas.getContext('2d');
@@ -191,7 +191,7 @@ export const updateAllBeamsShortTermStress = function(fd) {
 
   const processBeams = (beams) => {
     beams.forEach(b => {
-      const data = calculateFoundationHorizontalStressData(b, fd);
+      const data = calculateFoundationHorizontalStressData(b, fd, '1', floorData, FLOORS);
       if (!data) {
         failedCount++;
         return;

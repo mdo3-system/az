@@ -1,7 +1,6 @@
-// ui/prop_panel_diaphragm.js
 import { calculateDiaphragmProps } from '../core/slab_calc.js';
 import { handlePropChange } from '../state_manager.js';
-import { floorData } from '../foundation_cad.js';
+import { floorData, FLOORS } from '../foundation_cad.js';
 
 /**
  * 水平構面用のパネル
@@ -11,7 +10,7 @@ export const buildDiaphragmPanel = (el, fd) => {
   const diaph = fd.diaphragms[index];
   if (!diaph) return '';
   
-  calculateDiaphragmProps(); // 全体再計算
+  calculateDiaphragmProps(floorData, FLOORS); // 全体再計算
 
   let warningHtml = '';
   if (diaph.error) {

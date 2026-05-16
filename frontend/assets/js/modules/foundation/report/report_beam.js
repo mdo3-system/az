@@ -1,4 +1,11 @@
-import { floorData, currentFloor } from '../foundation_cad.js';
+import { floorData, currentFloor, FLOORS } from '../foundation_cad.js';
+import { 
+  computeBeamStress, 
+  findSupportsOnBeam, 
+  calculateDetailedBeamCheckResults 
+} from '../core/beam_calc.js';
+import { calculateFoundationHorizontalStressData } from '../core/column_calc.js';
+import { generateSingleBeamNMQStressSvg } from './svg_beam_stress.js';
 
 /**
  * 基礎梁の長期応力算定表（HTML）を生成する
@@ -7,12 +14,12 @@ export const generateFoundationLongTermStressTable = window.generateFoundationLo
   const fd = floorData[currentFloor];
   if (!fd || !beam) return '';
   
-  const stress = window.computeBeamStress(fd, beam);
+  const stress = computeBeamStress(fd, beam);
   const spans = (beam.longTermSpans || (stress ? stress.longTermSpans : [])) || [];
   if (spans.length === 0) return '';
 
   let rowsHtml = '';
-  const supports = window.findSupportsOnBeam(beam, fd.nodes, fd.columns);
+  const supports = findSupportsOnBeam(beam, fd.nodes, fd.columns);
   const n1 = fd.nodes[beam.n1];
   const n2 = fd.nodes[beam.n2];
   
@@ -72,10 +79,10 @@ export const generateFoundationHorizontalStressTable = window.generateFoundation
   const fd = floorData['1'];
   if (!fd) return '';
   
-  const data = window.calculateFoundationHorizontalStressData(beam, fd);
+  const data = calculateFoundationHorizontalStressData(beam, fd, '1', floorData, FLOORS);
   if (!data) return '';
   
-  const supports = window.findSupportsOnBeam ? window.findSupportsOnBeam(beam, fd.nodes, fd.columns) : [];
+  const supports = findSupportsOnBeam ? findSupportsOnBeam(beam, fd.nodes, fd.columns) : [];
   const ratios = Array.from(new Set(supports.map(s => s.col.inflectionRatio ?? 0.5))).sort();
   const bText = ratios.length > 0 ? ratios.join(', ') : "0.5";
 
@@ -208,7 +215,7 @@ export const generateFoundationHorizontalStressTable = window.generateFoundation
   let table1Rows = '', table2Rows = '', table3Rows = '', table4Rows = '', table5Rows = '';
   const shortTermN = parseFloat((fd && fd.shortTermN) || window.shortTermN || 2.0);
 
-  const checkResults = window.calculateDetailedBeamCheckResults(beam, fd, horizontalData, shortTermN);
+  const checkResults = calculateDetailedBeamCheckResults(beam, fd, horizontalData, shortTermN);
   if (!checkResults) return '<p>計算エラー</p>';
 
   checkResults.forEach((res, i) => {
@@ -417,11 +424,9 @@ export const generateFoundationBeamReportHtml = window.generateFoundationBeamRep
          </h3>
      `;
      beamsInAxis.forEach(b => {
-        const detailTables = (window.generateFoundationHorizontalStressTable) 
-          ? window.generateFoundationHorizontalStressTable(b, 'beam', 0, true) 
-          : '<p style="color:red;">算定エラー: 計算関数が見つかりません</p>';
+        const detailTables = generateFoundationHorizontalStressTable(b, 'beam', 0, true);
 
-        const stressSvg = window.generateSingleBeamNMQStressSvg ? window.generateSingleBeamNMQStressSvg(b) : '';
+        const stressSvg = generateSingleBeamNMQStressSvg ? generateSingleBeamNMQStressSvg(b) : '';
 
         html += `
           <div class="beam-set" style="margin-bottom: 60px; page-break-inside: auto;">

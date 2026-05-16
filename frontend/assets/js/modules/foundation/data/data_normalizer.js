@@ -100,7 +100,15 @@ export function normalizeBeam(b) {
     // 応力・負担幅データも保持 (syncSlabDataToBeamsで上書きされるがロード時などは重要)
     tributaryWidth: asNum(b.tributaryWidth, 0),
     groundPressure: asNum(b.groundPressure, 0),
-    spanLoads: b.spanLoads || []
+    spanLoads: b.spanLoads || [],
+    
+    // 💡 重要: スパン別詳細データ (spanProps, spans) を消失させないように保持
+    spanProps: Array.isArray(b.spanProps) ? b.spanProps : (Array.isArray(b.spans) ? b.spans : []),
+    spans: Array.isArray(b.spans) ? b.spans : (Array.isArray(b.spanProps) ? b.spanProps : []),
+    
+    // 応力データ等の中間計算値もロード・履歴復元用に保持
+    stressData: b.stressData || null,
+    calcResult: b.calcResult || null
   };
 }
 

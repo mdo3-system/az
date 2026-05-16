@@ -1,5 +1,4 @@
-// ui/modal_column.js
-import { floorData, currentFloor } from '../foundation_cad.js';
+import { floorData, currentFloor, FLOORS } from '../foundation_cad.js';
 import { makeDraggable } from '../ui_utils.js';
 import { calculateColumnT } from '../core/column_calc.js';
 import { HARDWARE_MASTER } from '../core/constants.js';
@@ -22,7 +21,7 @@ export const openColumnDetailModal = function(index) {
   const n = fd.nodes[c.nodeIndex];
   if (!c || !n) return;
 
-  const res = calculateColumnT(index, fd);
+  const res = calculateColumnT(index, fd, currentFloor, floorData, FLOORS);
   const topOk = res.criticalCase?.isTopOk;
   const baseOk = res.criticalCase?.isBaseOk;
 

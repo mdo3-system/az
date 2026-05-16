@@ -99,8 +99,8 @@ export const renameAxis = (dir, idx, newName) => {
  */
 export const forceSyncAllSymbols = () => {
     import('./grid_manager.js').then(({ syncAllElementSymbols }) => {
-        syncAllElementSymbols();
-        alert("すべての柱符号および要素の通り芯名を現在のラベルに整合させました。");
+        syncAllElementSymbols(true);
+        alert("すべての柱符号および耐力壁・梁の通り芯名を現在のラベルに整合させました。");
         if (typeof window.updatePropertyPanel === 'function') window.updatePropertyPanel();
         if (typeof window.updateDataList === 'function') window.updateDataList();
         pushHistory();

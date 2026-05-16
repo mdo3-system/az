@@ -197,8 +197,14 @@ export function getAffectedElementsCount(dir, idx) {
 /**
  * 全階層の全要素（柱、壁、梁等）の符号を現在の通り芯に合わせて再構成する
  */
-export function syncAllElementSymbols() {
+/**
+ * 全階層の全要素（柱、壁、梁等）の符号を現在の通り芯に合わせて再構成する
+ * @param {boolean} force - 強制的に上書きするかどうか
+ */
+export function syncAllElementSymbols(force = false) {
   rebuildNodeIds();
+  const TOL_COORD = 20; // 座標一致の許容誤差
+
   FLOORS.forEach(f => {
     const fd = floorData[f];
     if (!fd) return;
@@ -209,9 +215,8 @@ export function syncAllElementSymbols() {
         const node = fd.nodes[c.nodeIndex];
         if (node && node.id) {
           const newId = node.id.replace(/_[0-9]+$/, "");
-          // 既存のIDが新しいIDを前方一致で含んでいる場合（例: X2Y3b が X2Y3 を含む）、
-          // 接尾辞を保護するために上書きをスキップする
-          if (c.id && c.id.startsWith(newId)) return;
+          // 強制更新でない場合、既存のIDが新しいIDを含んでいればスキップ
+          if (!force && c.id && c.id.startsWith(newId)) return;
           c.id = newId;
         }
       });
@@ -222,17 +227,53 @@ export function syncAllElementSymbols() {
     elements.forEach(el => {
       const n1 = fd.nodes[el.n1];
       const n2 = fd.nodes[el.n2];
-      if (n1 && n2) {
-        // 通り芯名を最寄りの位置から再取得 (100mm以内)
+      if (!n1 || !n2) return;
+
+      let bestAxis = "";
+      const MATCH_TOL = 5; // 💡 150mmから5mmに厳格化（近接通り芯の誤判定を防止）
+      
+      // A. 垂直判定 (X座標がほぼ同じ) -> X軸名を採用
+      if (Math.abs(n1.x - n2.x) < TOL_COORD) {
+        // 最も座標が近い垂直軸を選択
+        const sorted = dxfVAxes.filter(a => Math.abs(a.x - n1.x) < MATCH_TOL)
+                              .sort((a, b) => Math.abs(a.x - n1.x) - Math.abs(b.x - n1.x));
+        if (sorted[0]) bestAxis = sorted[0].label || "";
+      } 
+      // B. 水平判定 (Y座標がほぼ同じ) -> Y軸名を採用
+      else if (Math.abs(n1.y - n2.y) < TOL_COORD) {
+        // 最も座標が近い水平軸を選択
+        const sorted = dxfHAxes.filter(a => Math.abs(a.y - n1.y) < MATCH_TOL)
+                              .sort((a, b) => Math.abs(a.y - n1.y) - Math.abs(b.y - n1.y));
+        if (sorted[0]) bestAxis = sorted[0].label || "";
+      }
+      
+      // C. 斜め軸判定 (垂直・水平でない場合、または上記で見つからない場合)
+      if (!bestAxis) {
         const midX = (n1.x + n2.x) / 2;
         const midY = (n1.y + n2.y) / 2;
-        const bestAxis = findNearestAxisName(midX, midY, 100);
         
-        // 💡 すでに有効な通り芯名がある場合は上書きしない（空または"?"を含む場合のみ更新）
-        if (bestAxis && (!el.axisName || el.axisName.includes('?'))) {
-          el.axisName = bestAxis;
-          el.axis = bestAxis; // 💡 axisプロパティも同期
+        let candidates = [];
+        dxfSkewedAxes.forEach(sa => {
+          const dx = sa.p2.x - sa.p1.x;
+          const dy = sa.p2.y - sa.p1.y;
+          const len = Math.sqrt(dx*dx + dy*dy);
+          if (len < 1) return;
+          const dist = Math.abs(dy*midX - dx*midY + sa.p2.x*sa.p1.y - sa.p2.y*sa.p1.x) / len;
+          if (dist < MATCH_TOL) {
+            candidates.push({ dist, label: sa.label });
+          }
+        });
+        
+        if (candidates.length > 0) {
+          candidates.sort((a, b) => a.dist - b.dist);
+          bestAxis = candidates[0].label || "";
         }
+      }
+      
+      // 反映 (強制更新、または未設定/不完全な場合)
+      if (bestAxis && (force || !el.axisName || el.axisName.includes('?'))) {
+        el.axisName = bestAxis;
+        el.axis = bestAxis;
       }
     });
   });

@@ -1,6 +1,9 @@
-import { floorData, currentFloor } from './foundation_cad.js';
+import { floorData, currentFloor, pushHistory } from './foundation_cad.js';
 import { handlePropChange } from './state_manager.js';
 import { makeDraggable } from './ui_utils.js';
+import { calcBeamResult } from './events/beam_ui_handlers.js';
+import { generateFoundationHorizontalStressTable } from './report/report_beam.js';
+import { drawBeamStressOnCanvas } from './stress_display.js';
 
 // 1. 梁ポップアップの一時データ保存
 export const saveBeamPopupData = function(type, index, field, value) {
@@ -77,11 +80,9 @@ export const openBeamStressPopup = function(type, index) {
     document.body.appendChild(modal);
   }
 
-  const scrollContainer = modal.querySelector('#beamStressModalContent');
-  if (scrollContainer) {
-    const currentHeight = scrollContainer.scrollHeight;
-    if (currentHeight > 0) scrollContainer.style.minHeight = currentHeight + 'px';
-  }
+  // 💡 モーダル全体のガクつき（上下の動き）を防ぐため、現在の高さを最小高さとして一時保持
+  const currentTotalHeight = modal.offsetHeight;
+  if (currentTotalHeight > 0) modal.style.minHeight = currentTotalHeight + 'px';
 
   window.updatePopupValue = function(prop, value) {
      if (prop === 'width' || prop === 'depth' || prop === 'dt' || prop === 'ft') {
@@ -116,7 +117,7 @@ export const openBeamStressPopup = function(type, index) {
   const mainRebars = typeof REBAR_MASTER !== 'undefined' ? REBAR_MASTER.mainRows : [ {value:'D13',label:'2-D13'} ];
   const stirrups = typeof REBAR_MASTER !== 'undefined' ? REBAR_MASTER.stirrups : [ {value:'D10',label:'D10'} ];
 
-  const res = window.calcBeamResult ? window.calcBeamResult(beam) : {};
+  const res = calcBeamResult ? calcBeamResult(beam) : {};
 
   const contentHtml = `
     <div id="beamStressModalContent" style="padding:15px; flex:1; overflow-y:auto; font-size:11px; font-family:var(--mono); color:#fff; background:#1e1e1e;">
@@ -149,7 +150,7 @@ export const openBeamStressPopup = function(type, index) {
       </div>
 
       <!-- 3. 短期応力算定表 (Td, R, Qe, Mf) -->
-      ${window.generateFoundationHorizontalStressTable ? window.generateFoundationHorizontalStressTable(beam, type, index) : ''}
+      ${generateFoundationHorizontalStressTable ? generateFoundationHorizontalStressTable(beam, type, index) : ''}
 
       <!-- 4. アンカーボルト設定と通り別検定 (Task 4.6) -->
       <div style="margin-top:20px; padding:15px; background:rgba(46,204,113,0.1); border:1px solid rgba(46,204,113,0.3); border-radius:8px;">
@@ -232,23 +233,23 @@ export const openBeamStressPopup = function(type, index) {
 
   modal.innerHTML = headerHtml + contentHtml;
   
-  // 💡 まず即座に復元を試みる
-  const newScrollContainer = modal.querySelector('#beamStressModalContent');
-  if (newScrollContainer) {
-    newScrollContainer.scrollTop = lastScroll;
+  // 💡 即座にスクロール位置を復元（レイアウトのガクつきを最小限に）
+  const newScrollContent = modal.querySelector('#beamStressModalContent');
+  if (newScrollContent) {
+    newScrollContent.scrollTop = lastScroll;
   }
   if (activeId) {
     const el = document.getElementById(activeId);
     if (el) el.focus();
   }
 
-  // 💡 さらに念のため次のフレームでも復元 (DOM更新のタイミングずれ対策)
+  // 💡 さらに念のため次のフレームでも位置調整（DOM更新の完了待ち）
   requestAnimationFrame(() => {
     const scrollContent = modal.querySelector('#beamStressModalContent');
     if (scrollContent) {
       scrollContent.scrollTop = lastScroll;
-      scrollContent.style.minHeight = ''; // min-height解除
     }
+    modal.style.minHeight = ''; // モーダル本体のmin-height解除
     if (activeId) {
       const el = document.getElementById(activeId);
       if (el && document.activeElement !== el) el.focus();
@@ -259,8 +260,8 @@ export const openBeamStressPopup = function(type, index) {
   makeDraggable(modal, modal.querySelector('#beam-modal-header'));
 
   setTimeout(() => {
-    if (window.drawBeamStressOnCanvas) {
-       window.drawBeamStressOnCanvas('foundationHorizontalStressCanvas', beam);
+    if (drawBeamStressOnCanvas) {
+       drawBeamStressOnCanvas('foundationHorizontalStressCanvas', beam);
     }
   }, 50);
 };
@@ -303,6 +304,8 @@ export const updateBeamSpanProp = function(type, index, spanIndex, prop, value) 
   if (['b', 'D', 'dt'].includes(prop)) {
     if (typeof window.syncSlabDataToBeams === 'function') window.syncSlabDataToBeams();
   }
+  
+  if (typeof pushHistory === 'function') pushHistory();
 
   window.openBeamStressPopup(type, index);
 };

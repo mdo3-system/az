@@ -1,12 +1,12 @@
 // core/beam_calc.js
-import { STRESS_TOLERANCE } from './constants.js';
+import { TOLERANCES } from './constants.js';
 import { checkCollinear, getSegmentOverlap } from './geometry_utils.js';
 
 /**
- * 基礎梁の重複クリーンアップ (Mission 12)
+ * 基礎梁の重複クリーンアップ
  * 重複または包含関係にある梁のうち、最も長いセグメントを残して他を削除する。
  */
-export const cleanupOverlappingBeams = window.cleanupOverlappingBeams = function(fd) {
+export const cleanupOverlappingBeams = function(fd) {
   if (!fd) return;
   
   const allBeams = [
@@ -61,7 +61,7 @@ export const cleanupOverlappingBeams = window.cleanupOverlappingBeams = function
 /**
  * 同一の軸名（通り芯）を持つ基礎梁を一本の連続した梁に自動統合する
  */
-export const autoMergeCollinearBeams = window.autoMergeCollinearBeams = function(fd) {
+export const autoMergeCollinearBeams = function(fd) {
     if (!fd || !fd.nodes) return;
 
     const allBeamRefs = [
@@ -197,27 +197,29 @@ export const autoMergeCollinearBeams = window.autoMergeCollinearBeams = function
     }
 };
 
-export const findSupportsOnBeam = window.findSupportsOnBeam = function(beam, nodes, columns) {
+/**
+ * 梁上の支点を検索する（柱との距離判定）
+ */
+export const findSupportsOnBeam = function(beam, nodes, columns) {
     const n1 = nodes[beam.n1];
     const n2 = nodes[beam.n2];
     const supports = [];
     if(!n1 || !n2) return [];
     
-    const l2 = Math.pow(n2.x - n1.x, 2) + Math.pow(n2.y - n1.y, 2);
-    if(l2 === 0) return [];
+    const dx = n2.x - n1.x, dy = n2.y - n1.y;
+    const L2 = dx * dx + dy * dy;
+    if(L2 === 0) return [];
     
     columns.forEach(col => {
         const cn = nodes[col.nodeIndex];
         if(!cn) return;
-        const dx = n2.x - n1.x, dy = n2.y - n1.y;
-        const L2 = dx * dx + dy * dy;
-        const t = L2 === 0 ? 0 : ((cn.x - n1.x) * dx + (cn.y - n1.y) * dy) / L2;
+        const t = ((cn.x - n1.x) * dx + (cn.y - n1.y) * dy) / L2;
 
         if(t >= -0.05 && t <= 1.05) {
             const projX = n1.x + t * dx;
             const projY = n1.y + t * dy;
             const dist = Math.hypot(cn.x - projX, cn.y - projY);
-            if (dist < STRESS_TOLERANCE) { 
+            if (dist < TOLERANCES.STRUCTURAL_CONN) { 
                 supports.push({ col, distFromStart: t * Math.sqrt(L2) / 1000, t });
             }
         }
@@ -227,6 +229,9 @@ export const findSupportsOnBeam = window.findSupportsOnBeam = function(beam, nod
     return supports;
 };
 
+/**
+ * 単一スパンの応力計算
+ */
 export function calculateSingleSpanStress({w, L, c1, c2}) {
   let M1 = 0, M2 = 0, Mc = 0, Q1 = 0, Q2 = 0;
   if (c1 === 'pin') c1 = 'pin'; else if (c1 !== 'cantilever') c1 = 'fixed';
@@ -264,7 +269,10 @@ export function calculateSingleSpanStress({w, L, c1, c2}) {
   return { L, M1, M2, Mc, Q1, Q2 };
 }
 
-export const computeBeamStress = window.computeBeamStress = function(fd, beam) {
+/**
+ * 基礎梁の全応力を計算する
+ */
+export const computeBeamStress = function(fd, beam) {
   if (!beam || (!beam.n1 && !beam.n2)) return null;
   const n1 = fd.nodes[beam.n1];
   const n2 = fd.nodes[beam.n2];
@@ -349,7 +357,10 @@ export const computeBeamStress = window.computeBeamStress = function(fd, beam) {
   return { w: w_total, L: totalL, M1: M1_total, M2: M2_total, Mc: Mc_total, Q1: Q1_total, Q2: Q2_total, w_slab: w_slab_total, w_self, spans, longTermSpans };
 };
 
-export const getRebarArea = window.getRebarArea = function(spec, mode = 'sum') {
+/**
+ * 鉄筋面積を取得
+ */
+export const getRebarArea = function(spec, mode = 'sum') {
   if (!spec) return 0;
   if (typeof spec === 'number') return spec;
   const map = { 10: 71.3, 13: 126.7, 16: 198.6, 19: 286.5, 22: 387.1 };
@@ -369,18 +380,14 @@ export const getRebarArea = window.getRebarArea = function(spec, mode = 'sum') {
   });
 
   if (countTotal === 0) return 0;
-  
-  if (mode === 'average') {
-    return sum / countTotal;
-  }
-  
+  if (mode === 'average') return sum / countTotal;
   return sum;
 };
 
 /**
- * 基礎梁スパン別の許容耐力を算出する（Jozan Ryusui氏指定式）
+ * 基礎梁スパン別の許容耐力を算出する
  */
-export const calculateSpanStrength = window.calculateSpanStrength = function(span, material = { ft: 195, fs: 0.7, fts: 295, fss: 1.05 }) {
+export const calculateSpanStrength = function(span, material = { ft: 195, fs: 0.7, fts: 295, fss: 1.05 }) {
     const b = span.b || 150;
     const D = span.D || 640;
     const dt = span.dt || 70;
@@ -402,13 +409,12 @@ export const calculateSpanStrength = window.calculateSpanStrength = function(spa
 };
 
 /**
- * 基礎梁の全スパンに対して詳細な断面検定（長期・短期・判定）を一括計算する
- * table_generator_foundation.js からのロジック委譲用
+ * 基礎梁の詳細な断面検定を一括計算する
  */
-export const calculateDetailedBeamCheckResults = window.calculateDetailedBeamCheckResults = function(beam, fd, horizontalData, shortTermN = 2.0) {
+export const calculateDetailedBeamCheckResults = function(beam, fd, horizontalData, shortTermN = 2.0) {
     if (!beam || !horizontalData) return null;
     const { points, resL, resR } = horizontalData;
-    const stress = window.computeBeamStress ? window.computeBeamStress(fd, beam) : null;
+    const stress = computeBeamStress(fd, beam);
     const spansCount = points.length - 1;
     const results = [];
 
@@ -494,3 +500,5 @@ export const calculateDetailedBeamCheckResults = window.calculateDetailedBeamChe
     }
     return results;
 };
+
+

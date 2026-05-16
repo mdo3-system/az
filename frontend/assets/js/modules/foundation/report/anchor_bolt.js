@@ -3,7 +3,7 @@
  * 5-9 アンカーボルトと土台の検定 HTML生成モジュール
  */
 
-export const generateAnchorBoltReportHtml = function(fd, anchorBoltMaster) {
+export const generateAnchorBoltReportHtml = function(fd, anchorBoltMaster, allFloorData, floorList) {
   if (!fd) return "";
 
   const anchorAxes = Array.from(window.getAxesToReport ? window.getAxesToReport() : (typeof getAxesToReport === 'function' ? getAxesToReport() : []));
@@ -45,7 +45,7 @@ export const generateAnchorBoltReportHtml = function(fd, anchorBoltMaster) {
     // 💡 ΣT (引張力合計) の算出
     let sumT = 0;
     (fd.columns || []).forEach((col, cIdx) => {
-      const res = (window.calculateColumnT ? window.calculateColumnT(cIdx, fd, '1') : null);
+      const res = (window.calculateColumnT ? window.calculateColumnT(cIdx, fd, '1', allFloorData, floorList) : null);
       if (res && res.cases) {
         const axisCases = res.cases.filter(cs => cs.name.includes(axis));
         // 各方向のうち最大のT値を合算

@@ -7,6 +7,7 @@ import {
     openColumnDetailModal, 
     openWallDetailModal, openDiaphragmDetailModal, drawDiaphragmEquivalentImage, openWallAxialModal, showAxialStressTable, renderAxialElevation, drawAxialElevationOnCanvas
 } from './modal_ui.js';
+import { openManualModal } from './ui/modal_manual.js';
 import { updateDataList } from './data_list_ui.js';
 import { showCalculationReport, getAxesToReport } from './report_generator.js';
 import { generateEnlargedAxialDiagramSvg } from './report/svg_axial_diagram.js';
@@ -23,10 +24,12 @@ export {
     updateDataList,
     showCalculationReport, getAxesToReport,
     generateEnlargedAxialDiagramSvg,
-    updatePropertyPanel
+    updatePropertyPanel,
+    openManualModal
 };
 
 window.safeRemoveById = safeRemoveById;
+window.openManualModal = openManualModal;
 
 // Global registrations have been moved to state_manager.js
 

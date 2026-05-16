@@ -179,14 +179,14 @@ export const renderAxialElevation = function() {
       if (!n1 || !n2) return false;
       const o1 = getProjectedPos(n1, refLine).offset;
       const o2 = getProjectedPos(n2, refLine).offset;
-      return Math.abs(o1) < 100 && Math.abs(o2) < 100;
+      return Math.abs(o1) < 10 && Math.abs(o2) < 10; // 💡 100mmから10mmに厳格化
     });
     
     const columnsOnAxis = (fd.columns || []).filter(c => {
       const n = fd.nodes[c.nodeIndex];
       if (!n) return false;
       const offset = getProjectedPos(n, refLine).offset;
-      return Math.abs(offset) < 100;
+      return Math.abs(offset) < 10; // 💡 100mmから10mmに厳格化
     });
 
     if (wallsOnAxis.length === 0 && columnsOnAxis.length === 0) {
@@ -447,9 +447,9 @@ export const drawAxialElevationOnCanvas = function(canvasId, floorDataMap, force
 
       if (node && String(fm.floor) === '1') {
         let labelStrs = [];
-        const vAx = (window.dxfVAxes || dxfVAxes || []).find(ax => Math.abs(ax.x - node.x) < 15);
+        const vAx = (window.dxfVAxes || dxfVAxes || []).find(ax => Math.abs(ax.x - node.x) < 5);
         if (vAx && vAx.label) labelStrs.push(vAx.label);
-        const hAx = (window.dxfHAxes || dxfHAxes || []).find(ax => Math.abs(ax.y - node.y) < 15);
+        const hAx = (window.dxfHAxes || dxfHAxes || []).find(ax => Math.abs(ax.y - node.y) < 5);
         if (hAx && hAx.label && !vAx) labelStrs.push(hAx.label);
         else if (hAx && hAx.label && vAx) labelStrs.push(hAx.label);
 

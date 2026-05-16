@@ -328,7 +328,11 @@ export function verifyIntervals(intervals, hasIntermediateWall) {
   });
 }
 
-export function calcSkewedDiaphragmModel({ diaphragm, allDiaphragms, nodes, walls, wallNodes, skewedAxis, hasIntermediateWall, floorSpecs, floorKey }) {
+export function calcSkewedDiaphragmModel({ 
+  diaphragm, allDiaphragms, nodes, walls, wallNodes, 
+  skewedAxis, hasIntermediateWall, floorSpecs, floorKey,
+  allSkewedAxes = [] // 💡 注入型に変更
+}) {
   let thetaDeg = skewedAxis.angle;
   if (thetaDeg === undefined && skewedAxis.p1 && skewedAxis.p2) {
     const dx = skewedAxis.p2.x - skewedAxis.p1.x;
@@ -378,15 +382,13 @@ export function calcSkewedDiaphragmModel({ diaphragm, allDiaphragms, nodes, wall
       return rotatePoint(ax.p1.x, ax.p1.y, thetaRad);
   };
 
-  const allSkewed = window.state?.dxfSkewedAxes || [];
-  
   // 💡 基準となる斜め軸そのものを確実にマップに登録 (最優先)
   const primaryP = getRotatedPos(skewedAxis);
   if (primaryP && skewedAxis.label) {
       allowedXMap.set(skewedAxis.label, primaryP.y);
   }
 
-  allSkewed.forEach(ax => {
+  (allSkewedAxes || []).forEach(ax => {
     if (!ax.label) return;
     const dThetaDeg = (ax.angle || 0) - (skewedAxis.angle || 0);
     const dThetaRad = (dThetaDeg * Math.PI) / 180;
@@ -448,5 +450,4 @@ export function calcSkewedDiaphragmModel({ diaphragm, allDiaphragms, nodes, wall
   };
 }
 
-window.calcSkewedDiaphragmModel = calcSkewedDiaphragmModel;
-window.rotatePoint = rotatePoint;
+

@@ -1,9 +1,8 @@
 // core/slab_calc.js
-import { floorData, currentFloor, FLOORS } from '../foundation_cad.js';
 import { clipPolygonStrict, dedupPolygon, calcPolygonAreaStrict } from './geometry_utils.js';
 import { getRebarArea } from './beam_calc.js';
 
-export const calculateSlabTributary = window.calculateSlabTributary = function(slab, nodes, beams) {
+export const calculateSlabTributary = function(slab, nodes, beams) {
     if (!slab.nodeIds || slab.nodeIds.length < 3) return;
     const initialPts = slab.nodeIds.map(nid => nodes[nid]).filter(Boolean);
     if (initialPts.length < 3) return;
@@ -95,7 +94,7 @@ export const calculateSlabTributary = window.calculateSlabTributary = function(s
     slab.edgeLengths = origLengths;
 };
 
-export const normalizeSupportCondition = window.normalizeSupportCondition = function(cond) {
+export const normalizeSupportCondition = function(cond) {
     if (!cond) return '4辺固定';
     let normalized = cond.replace(/\(/g, '（').replace(/\)/g, '）').replace(/\s+/g, '').trim();
     
@@ -144,7 +143,7 @@ function autoDetectSlabSupportPattern(slab, nodes) {
     return '4辺固定';
 }
 
-export const calculateSlabStress = window.calculateSlabStress = function(slab, nodes) {
+export const calculateSlabStress = function(slab, nodes) {
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     if (slab && slab.nodeIds && slab.nodeIds.length >= 3) {
       slab.nodeIds.forEach(nid => {
@@ -163,7 +162,6 @@ export const calculateSlabStress = window.calculateSlabStress = function(slab, n
     const lx = Math.max(0.1, Math.min(W, H)) / 1000.0;
     const ly = Math.max(0.1, Math.max(W, H)) / 1000.0;
 
-    // 💡 修正: slab.groundPressure が 0 の場合に fallback されないよう、明確に数値変換と undefined チェックを行う
     let sigma_e = 30.0;
     if (slab && slab.groundPressure !== undefined && slab.groundPressure !== null) {
         sigma_e = parseFloat(slab.groundPressure);
@@ -271,25 +269,22 @@ export const calculateSlabStress = window.calculateSlabStress = function(slab, n
     return { lx, ly, Mx1, Mx2, My1, My2, sigma_ex, w: sigma_e, cond, B, b, D, j };
 };
 
-export const calculateAndSetSlabAIJStress = window.calculateAndSetSlabAIJStress = function(slab, nodes) {
+export const calculateAndSetSlabAIJStress = function(slab, nodes) {
     if (!slab || !nodes) return;
     
-    const stress = window.calculateSlabStress(slab, nodes);
+    const stress = calculateSlabStress(slab, nodes);
     
     const t = slab.thickness !== undefined ? slab.thickness : (slab.t !== undefined ? slab.t : (slab.D !== undefined ? slab.D : 150));
     const dt = slab.dt !== undefined ? slab.dt : 70;
     const ft = slab.ft !== undefined ? slab.ft : 195;
-    const w = stress.w; // 💡 stress.w (calculateSlabStressで算定された値) を使用する
+    const w = stress.w; 
     
     const j = Math.max(stress.j, 1);
 
-    // AIJ 略算式: Mx1 (端部), Mx2 (中央)
-    // 基礎スラブ（上向き面圧）の場合：
-    // 中央 -> 上端引張, 端部 -> 下端引張
-    const reqAtX_Top = stress.Mx2 * 1e6 / (ft * j);    // 中央（上端筋）
-    const reqAtX_Bottom = stress.Mx1 * 1e6 / (ft * j); // 端部（下端筋）
-    const reqAtY_Top = stress.My2 * 1e6 / (ft * j);    // 中央（上端筋）
-    const reqAtY_Bottom = stress.My1 * 1e6 / (ft * j); // 端部（下端筋）
+    const reqAtX_Top = stress.Mx2 * 1e6 / (ft * j);    
+    const reqAtX_Bottom = stress.Mx1 * 1e6 / (ft * j); 
+    const reqAtY_Top = stress.My2 * 1e6 / (ft * j);    
+    const reqAtY_Bottom = stress.My1 * 1e6 / (ft * j); 
     
     const sR = slab.shortRebar || 'D13';
     const sP = slab.shortPitch !== undefined ? slab.shortPitch : 200;
@@ -331,22 +326,20 @@ export const calculateAndSetSlabAIJStress = window.calculateAndSetSlabAIJStress 
         ratioX: ratioX,
         ratioY: ratioY,
         isOK: (ratioX <= 1.0 && ratioY <= 1.0),
-        sR: sR, sP: sP, lR: lR, lP: lP, // 💡 UIモーダル(modal_slab.js)との互換性のために追加
+        sR: sR, sP: sP, lR: lR, lP: lP, 
         sTR: sR, sTP: sP, lTR: lR, lTP: lP,
         sBR: sR, sBP: sP, lBR: lR, lBP: lP
     };
 };
 
-export const calculateDiaphragmProps = window.calculateDiaphragmProps = function() {
-    const targetData = (typeof floorData !== 'undefined' ? floorData : null) || window.floorData;
-    
-    if (!targetData) {
-        console.warn("[System] calculateDiaphragmProps: floorDataが見つからないため計算をスキップします。");
+export const calculateDiaphragmProps = function(allFloorData, floorList) {
+    if (!allFloorData || !floorList) {
+        console.warn("[System] calculateDiaphragmProps: 必要なデータ(allFloorData, floorList)が不足しています。");
         return;
     }
     
-    Object.keys(targetData).forEach(floorKey => {
-        const fd = targetData[floorKey];
+    floorList.forEach(floorKey => {
+        const fd = allFloorData[floorKey];
         if (!fd || !fd.diaphragms) return;
 
         fd.diaphragms.forEach(diaph => {
@@ -403,3 +396,5 @@ export const calculateDiaphragmProps = window.calculateDiaphragmProps = function
         });
     });
 };
+
+

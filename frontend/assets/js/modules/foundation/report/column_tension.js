@@ -1,10 +1,12 @@
+import { FLOORS } from '../foundation_cad.js';
+
 /**
  * report/column_tension.js
  * 5-7 柱頭柱脚の引張耐力の検定 HTML生成モジュール
  */
 
 export const generateColumnTensionReportHtml = function(axisName, allFloorData, dxfVAxes, dxfHAxes) {
-  const floorsList = ['PH', 'R', '3', '2', '1'];
+  const floorsList = FLOORS;
 
   const vAxis = (dxfVAxes || []).find(a => a.label === axisName);
   const hAxis = (dxfHAxes || []).find(a => a.label === axisName);
@@ -91,8 +93,9 @@ export const generateColumnTensionReportHtml = function(axisName, allFloorData, 
         <tbody>
     `;
 
+    const normalizedTargetAxis = (axisName || "").replace(/通り$/, "").trim();
     colsOnAxis.forEach(item => {
-      const res = (window.calculateColumnT ? window.calculateColumnT(item.idx, floorDataObj, floorKey) : {});
+      const res = (window.calculateColumnT ? window.calculateColumnT(item.idx, floorDataObj, floorKey, allFloorData, FLOORS) : {});
       if (!res || !res.cases) return;
       
       const colNode = floorDataObj.nodes[item.col.nodeIndex];
@@ -102,7 +105,11 @@ export const generateColumnTensionReportHtml = function(axisName, allFloorData, 
       const yLabel = ha ? ha.label : (item.col.id ? item.col.id.substring(item.col.id.indexOf('Y')) : '-');
       const coordLabel = `${xLabel}<br>${yLabel}`;
 
-      const axisCases = res.cases.filter(c => c.name.includes(axisName));
+      // 💡 計算エンジンと同じ正規化を行い、完全一致でフィルタリングする
+      const axisCases = res.cases.filter(c => {
+        const normalizedCaseAxis = (c.axisName || "").replace(/通り$/, "").trim();
+        return normalizedCaseAxis === normalizedTargetAxis;
+      });
       
       axisCases.forEach((c, cIdx) => {
         const isFirst = cIdx === 0;

@@ -162,7 +162,6 @@ export const syncSlabDataToBeams = function(overrideFd = null) {
     if (currentFloor === '1' && typeof window.updateAllBeamsShortTermStress === 'function') {
         window.updateAllBeamsShortTermStress(fd);
     }
-    callRender();
 };
 
 /**
@@ -270,6 +269,8 @@ export const autoAssignWallAxes = function(fd) {
     });
 };
 
+import AppEventBus from './event_bus.js';
+
 /**
  * 全データの再計算と同期
  */
@@ -285,9 +286,7 @@ export const recalcAllTributaries = function() {
         window.updateAllBeamsShortTermStress(fd);
     }
 
-    if (typeof window.updateDataList === 'function') window.updateDataList();
-    if (typeof window.updatePropertyPanel === 'function') window.updatePropertyPanel();
-    callRender();
+    AppEventBus.emit('UI_REFRESH_REQUIRED', { type: 'recalc_all' });
 };
 
 // Global registrations have been moved to state_manager.js
