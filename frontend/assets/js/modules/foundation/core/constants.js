@@ -1,6 +1,6 @@
 // core/constants.js
 
-export const APP_VERSION = '3.1.0';
+export const APP_VERSION = '3.1.1';
 
 /**
  * 許容誤差 (Tolerances)
