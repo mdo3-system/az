@@ -184,6 +184,18 @@ export const generateFoundationHorizontalStressTable = window.generateFoundation
     </div>
   `;
 
+  const resultMatrix = generateBeamResultMatrixHtml(beam, fd, data, styles, isPrinting, type, index, points);
+  return stressPointsTable + resultMatrix;
+};
+
+/**
+ * 基礎梁の断面検定マトリックス（表1～表5）を生成するヘルパー
+ */
+export const generateBeamResultMatrixHtml = function(beam, fd, horizontalData, styles, isPrinting, type, index, points) {
+  const padding = "padding:5px;";
+  const borderStyle = `border:1px solid ${styles.border};`;
+  const { resL, resR } = horizontalData;
+
   const getSProp = (spanIdx, prop, def) => {
     if (beam.spans && beam.spans[spanIdx] && beam.spans[spanIdx][prop] !== undefined) {
       return beam.spans[spanIdx][prop];
@@ -223,6 +235,10 @@ export const generateFoundationHorizontalStressTable = window.generateFoundation
 
   const checkResults = calculateDetailedBeamCheckResults(beam, fd, horizontalData, shortTermN);
   if (!checkResults) return '<p>計算エラー</p>';
+
+  const isColumnModel = (beam.calcModel === 'column_supports');
+  const isSimpleBeam = (beam.calcModel === 'simple_beam');
+  const modelTitle = isSimpleBeam ? '単純梁モデル' : (isColumnModel ? '柱直下支点連続梁モデル' : '両端支点連続梁モデル');
 
   checkResults.forEach((res, i) => {
     const { 
@@ -334,9 +350,9 @@ export const generateFoundationHorizontalStressTable = window.generateFoundation
     `;
   });
 
-  const resultMatrix = `
+  return `
     <div style="margin-top:25px; border-top:1px solid ${styles.border}; padding-top:20px; color:${styles.text};">
-      <h4 style="color:${styles.accent}; margin-bottom:15px; border-left:4px solid ${styles.accent}; padding-left:10px;">📉 ${isColumnModel ? '柱直下支点連続梁モデル' : '両端支点連続梁モデル'} による断面検定</h4>
+      <h4 style="color:${styles.accent}; margin-bottom:15px; border-left:4px solid ${styles.accent}; padding-left:10px;">📉 ${modelTitle} による断面検定</h4>
       
       <p style="color:${styles.textDim}; font-size:${isPrinting?'9px':'10px'}; margin-bottom:4px;">[表1] 荷重の算定 (長期・スラブ負担荷重)</p>
       <table style="width:100%; border-collapse:collapse; font-size:${isPrinting?'9px':'10px'}; border:${isPrinting?'1px solid #000':'1px solid #555'}; text-align:center; margin-bottom:20px;">
@@ -383,6 +399,7 @@ export const generateFoundationHorizontalStressTable = window.generateFoundation
       </table>
     </div>
   `;
+};
 
   return stressPointsTable + resultMatrix;
 };
@@ -477,7 +494,8 @@ export const generateFoundationSimpleBeamStressTable = function(beam, type, inde
     </div>
   `;
 
-  return stressTable;
+  const resultMatrix = generateBeamResultMatrixHtml(beam, fd, data, styles, isPrinting, type, index, points);
+  return stressTable + resultMatrix;
 };
 
 /**

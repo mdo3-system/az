@@ -449,10 +449,25 @@ export const calculateDetailedBeamCheckResults = function(beam, fd, horizontalDa
         const absMLongMid = Math.abs(curM_mid);
         const absQLong = Math.max(0.01, Math.abs(curQ_L));
 
-        const MeL_start = Math.abs(resL[i].M_f), MeL_end = Math.abs(resL[i+1].M_f);
-        const QeL_e = Math.max(0.01, Math.abs(resL[i].Qe), Math.abs(resL[i+1].Qe));
-        const MeR_start = Math.abs(resR[i].M_f), MeR_end = Math.abs(resR[i+1].M_f);
-        const QeR_e = Math.max(0.01, Math.abs(resR[i].Qe), Math.abs(resR[i+1].Qe));
+        let MeL_start = Math.abs(resL[i].M_f), MeL_end = Math.abs(resL[i+1].M_f);
+        let QeL_e = Math.max(0.01, Math.abs(resL[i].Qe), Math.abs(resL[i+1].Qe));
+        let MeR_start = Math.abs(resR[i].M_f), MeR_end = Math.abs(resR[i+1].M_f);
+        let QeR_e = Math.max(0.01, Math.abs(resR[i].Qe), Math.abs(resR[i+1].Qe));
+
+        // 単純梁モデルの場合、スパン内のローカルモーメント M水 を考慮する
+        if (beam.calcModel === 'simple_beam') {
+          const n1Idx = points[i].nodeIndex, n2Idx = points[i+1].nodeIndex;
+          const hasWall = (fd.walls || []).some(w => (w.n1 === n1Idx && w.n2 === n2Idx) || (w.n1 === n2Idx && w.n2 === n1Idx));
+          if (hasWall) {
+            const Mw_L = Math.abs((resL[i].Td - resL[i+1].Td) * spanLen * 0.5);
+            const Mw_R = Math.abs((resR[i].Td - resR[i+1].Td) * spanLen * 0.5);
+            // グローバルモーメントと M水 の大きい方を検定に採用
+            MeL_start = Math.max(MeL_start, Mw_L);
+            MeL_end = Math.max(MeL_end, Mw_L);
+            MeR_start = Math.max(MeR_start, Mw_R);
+            MeR_end = Math.max(MeR_end, Mw_R);
+          }
+        }
 
         const Msht_L_left  = absMLongEnd + MeL_start;
         const Msht_L_right = absMLongEnd + MeL_end;
