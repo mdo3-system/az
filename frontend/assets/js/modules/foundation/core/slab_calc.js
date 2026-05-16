@@ -169,7 +169,8 @@ export const calculateSlabStress = function(slab, nodes) {
     }
 
     const D = slab ? (slab.thickness || slab.D || slab.t || 150) : 150;
-    const j = (7/8) * (D - 70.0);
+    const dtValue = (slab && slab.dt !== undefined) ? parseFloat(slab.dt) : 70.0;
+    const j = (7/8) * (D - dtValue);
 
     let cond = slab ? (slab.supportCondition || '4辺固定') : '4辺固定';
     if (cond === '自動判定' && slab) {
