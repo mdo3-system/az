@@ -4,6 +4,9 @@ import {
     normalizeSlab, normalizeDiaphragm 
 } from './data/data_normalizer.js';
 import AppEventBus from './core/event_bus.js';
+import { 
+  syncSlabDataToBeams, recalcAllTributaries 
+} from './core/data_synchronizer.js';
 
 export const handlePropChange = (type, arg2, arg3, arg4) => {
     let index, prop, value;
@@ -359,16 +362,15 @@ export const updateDefaultProperty = function(type, key, val) {
 /**
  * 壁の標準倍率の更新
  */
+/**
+ * 壁の標準倍率の更新
+ */
 export const updateDefaultWallMultiplier = function(val) {
   const parsed = parseFloat(val);
   if (state && !isNaN(parsed)) {
     state.defaultWallMultiplier = Math.min(7.0, Math.max(0, parsed));
   }
 };
-
-import { 
-  syncSlabDataToBeams, recalcAllTributaries 
-} from './core/data_synchronizer.js';
 
 // Side effects are handled via global window calls or direct calls where appropriate
 const callRender = () => { if(typeof window.callRender === 'function') window.callRender(); };

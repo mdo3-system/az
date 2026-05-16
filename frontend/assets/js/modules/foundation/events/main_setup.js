@@ -253,7 +253,10 @@ export const setupEventHandlers = function(canvas, state) {
         if (typeof recalcAllTributaries === 'function') recalcAllTributaries();
         callRender();
         alert('データを復元しました。');
-      } catch (err) { alert('JSON読込失敗'); }
+      } catch (err) { 
+        console.error('[JSON Load Error]', err);
+        alert('JSON読込失敗: ' + err.message); 
+      }
       e.target.value = '';
     };
     reader.readAsText(file);

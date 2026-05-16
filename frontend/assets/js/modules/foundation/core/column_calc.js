@@ -294,7 +294,7 @@ export const calculateFoundationHorizontalStressData = function(beam, fd, curren
       dist: s.distFromStart, colIndex: fd.columns.indexOf(s.col) 
     });
   });
-  rawPoints.push({ type: 'end', id: n2.id, x: n2.x, y: n2.y, dist: totalL });
+  rawPoints.push({ type: 'end', id: n2.id, x: n2.x, y: n2.y, dist: totalL * 1000 });
 
   rawPoints.sort((a, b) => a.dist - b.dist);
   const points = [];
@@ -313,13 +313,11 @@ export const calculateFoundationHorizontalStressData = function(beam, fd, curren
   
   const calcDir = (mode) => {
     const results = [];
-    let sum_Td = 0;
-    let sum_M_at_start = 0;
-
-    points.forEach(p => {
+    
+    // 1. 各点の Td を収集
+    const pointsWithTd = points.map(p => {
       let Td = 0;
       let cIdx = -1;
-      
       if (p.type === 'column') {
         cIdx = p.colIndex;
       } else {
@@ -346,65 +344,102 @@ export const calculateFoundationHorizontalStressData = function(beam, fd, curren
              targetCase = (res.cases || []).find(c => c.name.includes(cleanBeamAxis) && c.name.includes(axisMode) && c.direction === beamDir);
           }
         }
-        
         if (!targetCase) {
           const matchingDirs = (res.cases || []).filter(c => c.name.includes(axisMode) && c.direction === beamDir);
           if (matchingDirs.length > 0) {
             targetCase = matchingDirs.reduce((prev, curr) => (Math.abs(curr.Ne_bot) > Math.abs(prev.Ne_bot)) ? curr : prev);
           }
         }
-
         Td = (targetCase && targetCase.Td !== undefined && !isNaN(targetCase.Td)) ? targetCase.Td : 0;
       }
-      p[`temp_Td_${mode}`] = Td;
-      sum_Td += Td;
-      sum_M_at_start += Td * p.dist;
+      return { ...p, Td };
     });
 
-    const colIndices = points.map((p, idx) => p.type === 'column' ? idx : -1).filter(i => i !== -1);
-    
-    let supportIdx1, supportIdx2;
-    if (colIndices.length === 0) {
-      supportIdx1 = 0; supportIdx2 = points.length - 1;
-    } else if (colIndices.length === 1) {
-      supportIdx1 = colIndices[0]; supportIdx2 = colIndices[0];
-    } else {
-      supportIdx1 = colIndices[0]; supportIdx2 = colIndices[colIndices.length - 1];
-    }
-
-    const d1 = points[supportIdx1].dist;
-    const d2 = points[supportIdx2].dist;
-    const supportL = d2 - d1;
-
-    let sum_M_at_s1 = 0;
-    points.forEach(p => {
-      sum_M_at_s1 += p[`temp_Td_${mode}`] * (p.dist - d1);
-    });
-
-    let R1 = 0, R2 = 0;
-    if (supportL > 0.001) {
-      R2 = -sum_M_at_s1 / supportL;
-      R1 = -sum_Td - R2;
-    } else {
-      R1 = -sum_Td; R2 = 0;
-    }
-
-    let qe = 0;
-    let m_water = 0;
-    let prevDist = 0;
-
-    points.forEach((p, i) => {
-      let R = 0;
-      if (i === supportIdx1) R += R1;
-      if (i === supportIdx2 && supportIdx1 !== supportIdx2) R += R2;
+    if (model === 'column_supports') {
+      // --- 柱直下支点連続梁モデル ---
+      const colPts = pointsWithTd.filter(p => p.type === 'column');
+      const sumTd = pointsWithTd.reduce((sum, p) => sum + p.Td, 0);
+      const sumMTd = pointsWithTd.reduce((sum, p) => sum + p.Td * p.dist, 0);
       
-      const current_Td = p[`temp_Td_${mode}`];
+      let R_map = new Map();
+      if (colPts.length >= 2) {
+        // R = A + B*x の線形分布で平衡させる (ΣR = -ΣTd, ΣRx = -ΣTdx)
+        const n = colPts.length;
+        const targetSumR = -sumTd;
+        const targetSumMR = -sumMTd;
+        const sumX = colPts.reduce((sum, p) => sum + p.dist, 0);
+        const sumX2 = colPts.reduce((sum, p) => sum + (p.dist * p.dist), 0);
+        
+        const det = n * sumX2 - sumX * sumX;
+        if (Math.abs(det) > 1e-6) {
+          const A = (targetSumR * sumX2 - targetSumMR * sumX) / det;
+          const B = (n * targetSumMR - targetSumR * sumX) / det;
+          colPts.forEach(p => {
+            R_map.set(p.dist, A + B * p.dist);
+          });
+        } else {
+          colPts.forEach(p => R_map.set(p.dist, targetSumR / n));
+        }
+      } else if (colPts.length === 1) {
+        R_map.set(colPts[0].dist, -sumTd);
+      }
+
+      let qe = 0;
+      let m_water = 0;
+      let prevDist = 0;
+      pointsWithTd.forEach((p, i) => {
+        const R = R_map.get(p.dist) || 0;
+        if (i > 0) m_water += qe * (p.dist - prevDist) / 1000; // mm -> m
+        
+        qe += (p.Td + R);
+        results.push({ Td: p.Td, R, Qe: qe, M_f: m_water });
+        prevDist = p.dist;
+      });
+
+    } else {
+      // --- 従来の両端支点モデル ---
+      const colIndices = pointsWithTd.map((p, idx) => p.type === 'column' ? idx : -1).filter(i => i !== -1);
+      let supportIdx1, supportIdx2;
+      if (colIndices.length === 0) {
+        supportIdx1 = 0; supportIdx2 = pointsWithTd.length - 1;
+      } else if (colIndices.length === 1) {
+        supportIdx1 = colIndices[0]; supportIdx2 = colIndices[0];
+      } else {
+        supportIdx1 = colIndices[0]; supportIdx2 = colIndices[colIndices.length - 1];
+      }
+
+      const sum_Td = pointsWithTd.reduce((sum, p) => sum + p.Td, 0);
+      const d1 = pointsWithTd[supportIdx1].dist;
+      const d2 = pointsWithTd[supportIdx2].dist;
+      const supportL = d2 - d1;
       
-      if (i > 0) m_water += qe * (p.dist - prevDist);
-      qe += current_Td + R;
-      results.push({ Td: current_Td, R, Qe: qe, M_f: m_water });
-      prevDist = p.dist;
-    });
+      let sum_M_at_s1 = 0;
+      pointsWithTd.forEach(p => {
+        sum_M_at_s1 += p.Td * (p.dist - d1);
+      });
+
+      let R1 = 0, R2 = 0;
+      if (supportL > 0.001) {
+        R2 = -sum_M_at_s1 / supportL;
+        R1 = -sum_Td - R2;
+      } else {
+        R1 = -sum_Td; R2 = 0;
+      }
+
+      let qe = 0;
+      let m_water = 0;
+      let prevDist = 0;
+      pointsWithTd.forEach((p, i) => {
+        let R = 0;
+        if (i === supportIdx1) R += R1;
+        if (i === supportIdx2 && supportIdx1 !== supportIdx2) R += R2;
+        
+        if (i > 0) m_water += qe * (p.dist - prevDist) / 1000;
+        qe += (p.Td + R);
+        results.push({ Td: p.Td, R, Qe: qe, M_f: m_water });
+        prevDist = p.dist;
+      });
+    }
     return results;
   };
   return { points, resL: calcDir('L'), resR: calcDir('R'), totalL };

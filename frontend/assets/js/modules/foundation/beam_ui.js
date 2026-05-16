@@ -24,6 +24,9 @@ export const saveBeamPopupData = function(type, index, field, value) {
             b.anchorM12 = parseInt(value) || 0;
         } else if (field === 'anchorM16') {
             b.anchorM16 = parseInt(value) || 0;
+        } else if (field === 'calcModel') {
+            b.calcModel = value;
+            if (typeof window.handlePropChange === 'function') window.handlePropChange(type, index, 'calcModel', value);
         } else if (field === 'showReport') {
             b.showReport = (value === true || value === 'true');
         }
@@ -128,7 +131,13 @@ export const openBeamStressPopup = function(type, index) {
           <span>通り芯: <span style="color:var(--accent); font-weight:bold;">${axisCoord}</span></span>
           <span>符号: <span style="color:var(--accent); font-weight:bold;">${beam.id}</span></span>
           <span style="margin-left: 10px; font-size:11px; color:#aaa;">通り名(壁と連動):</span>
-          <input type="text" id="modal-beam-axisName" value="${beam.axisName || beam.axis || ''}" onchange="window.saveBeamPopupData('${type}', ${index}, 'axisName', this.value)" placeholder="例: X1" style="width:80px; padding:4px; background:#333; color:#fff; border:1px solid #555; border-radius:4px;">
+          <input type="text" id="modal-beam-axisName" value="${beam.axisName || beam.axis || ''}" onchange="window.saveBeamPopupData('${type}', ${index}, 'axisName', this.value)" placeholder="例: X1" style="width:70px; padding:4px; background:#333; color:#fff; border:1px solid #555; border-radius:4px;">
+          
+          <span style="margin-left: 15px; font-size:11px; color:#aaa;">計算モデル:</span>
+          <select onchange="window.saveBeamPopupData('${type}', ${index}, 'calcModel', this.value)" style="padding:4px; background:#333; color:#fff; border:1px solid #555; border-radius:4px; font-size:11px;">
+            <option value="span_supports" ${(!beam.calcModel || beam.calcModel === 'span_supports') ? 'selected' : ''}>両端支点連続梁</option>
+            <option value="column_supports" ${beam.calcModel === 'column_supports' ? 'selected' : ''}>柱直下支点連続梁</option>
+          </select>
         </div>
         <div style="text-align:right;">
           スパン Lo: <b>${(res.Lo || 0).toFixed(3)}</b> m　

@@ -79,7 +79,7 @@ export const generateFoundationHorizontalStressTable = window.generateFoundation
   const fd = floorData['1'];
   if (!fd) return '';
   
-  const data = calculateFoundationHorizontalStressData(beam, fd, '1', floorData, FLOORS);
+  const data = calculateFoundationHorizontalStressData(fd, beam, '1', floorData, FLOORS, beam.calcModel || 'span_supports');
   if (!data) return '';
   
   const supports = findSupportsOnBeam ? findSupportsOnBeam(beam, fd.nodes, fd.columns) : [];

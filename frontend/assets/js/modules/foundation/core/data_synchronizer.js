@@ -1,3 +1,4 @@
+import AppEventBus from './event_bus.js';
 import { 
     floorData, currentFloor, nextId, updateNextId, 
     dxfVAxes, dxfHAxes, dxfSkewedAxes, getCurrentFloorData 
@@ -268,8 +269,6 @@ export const autoAssignWallAxes = function(fd) {
         }
     });
 };
-
-import AppEventBus from './event_bus.js';
 
 /**
  * 全データの再計算と同期
