@@ -93,7 +93,8 @@ export const defaultProperties = {
     id: "S1",
     thickness: 150,
     rebarX: "D10@200",
-    rebarY: "D10@200"
+    rebarY: "D10@200",
+    dt: 70
   }
 };
 
