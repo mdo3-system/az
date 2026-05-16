@@ -40,3 +40,9 @@ AIは、コードを提案する際、必ず以下のヘッダーを冒頭に付
 
 ## 7. ドキュメントと言語
 *   実装計画書、進捗報告、実装報告書を含め、ユーザーへの報告およびドキュメント作成は**すべて日本語**で行うこと。
+
+## 8. UI・ログ上のバージョン表示統一 (Version Display Unification)
+AIエージェントは、バージョンの更新時、以下の箇所にあるバージョン文字列をすべて最新のものに統一して更新しなければならない。
+*   `frontend/index.html`: 左上ブランドヘッダー (`topbar-version`) および右下バージョンバッジ (`app-version`)。
+*   `frontend/assets/js/modules/foundation/foundation_main.js`: コンソール初期化ログ。
+*   `frontend/assets/js/modules/foundation/events/global_bridge.js`: コンソール初期化ログ。
