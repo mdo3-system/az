@@ -82,9 +82,11 @@ export const generateFoundationHorizontalStressTable = window.generateFoundation
   const data = calculateFoundationHorizontalStressData(fd, beam, '1', floorData, FLOORS, beam.calcModel || 'span_supports');
   if (!data) return '';
   
+  const isColumnModel = (beam.calcModel === 'column_supports');
   const supports = findSupportsOnBeam ? findSupportsOnBeam(beam, fd.nodes, fd.columns) : [];
   const ratios = Array.from(new Set(supports.map(s => s.col.inflectionRatio ?? 0.5))).sort();
-  const bText = ratios.length > 0 ? ratios.join(', ') : "0.5";
+  const bText = isColumnModel ? "考慮なし(B=1.0相当)" : (ratios.length > 0 ? ratios.join(', ') : "0.5");
+  const tdLabel = isColumnModel ? "ΣNi(kN)" : "Td(kN)";
 
   const { points, resL, resR } = data;
   const horizontalData = data; // Alias for readability
@@ -150,7 +152,7 @@ export const generateFoundationHorizontalStressTable = window.generateFoundation
     <div style="margin-top:25px; padding:15px; background:${styles.bgPanel}; border-radius:10px; border:1px solid ${styles.border}; width:100%; box-sizing:border-box;">
       ${slabInfoHtml}
       <div style="color:${styles.accent}; font-weight:bold; font-size:14px; margin-bottom:12px; display:flex; align-items:center; gap:10px; border-bottom:1px solid ${styles.border}; padding-bottom:8px;">
-        <span style="font-size:18px;">📊</span> 応力の算定（水平荷重時） 反曲点高比 B = ${bText}
+        <span style="font-size:18px;">📊</span> 応力の算定（水平荷重時） ${isColumnModel ? '柱直下支点連続梁モデル' : `反曲点高比 B = ${bText}`}
       </div>
       <div style="overflow-x:auto;">
         <table style="width:100%; border-collapse:collapse; font-size:${isPrinting?'9px':'11px'}; color:${styles.text}; min-width:${isPrinting?'unset':'900px'}; table-layout: fixed;">
@@ -162,11 +164,11 @@ export const generateFoundationHorizontalStressTable = window.generateFoundation
               <th colspan="4" style="${borderStyle} background:${isPrinting ? '#eee' : 'rgba(231,76,60,0.1)'};">地震時：右加力</th>
             </tr>
             <tr style="background:${styles.headerBg2};">
-              <th style="${borderStyle}">Td(kN)</th>
+              <th style="${borderStyle}">${tdLabel}</th>
               <th style="${borderStyle}">R(kN)</th>
               <th style="${borderStyle}">Qe(kN)</th>
               <th style="${borderStyle}">M水(kN･m)</th>
-              <th style="${borderStyle}">Td(kN)</th>
+              <th style="${borderStyle}">${tdLabel}</th>
               <th style="${borderStyle}">R(kN)</th>
               <th style="${borderStyle}">Qe(kN)</th>
               <th style="${borderStyle}">M水(kN･m)</th>

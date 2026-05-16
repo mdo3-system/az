@@ -271,21 +271,33 @@ export const calculateColumnT = function(colIndex, fd, targetFloorKey, allFloorD
 /**
  * 基礎梁の応力データを計算する（純粋関数）
  */
-export const calculateFoundationHorizontalStressData = function(beam, fd, currentFloorKey, allFloorData, floorList) {
+export const calculateFoundationHorizontalStressData = function(fd, beam, currentFloorKey, allFloorData, floorList, model = 'span_supports') {
   if (!fd || !beam) return null;
   
+  if (!fd.nodes) {
+    console.error('[calculateFoundationHorizontalStressData] fd.nodes is missing!', fd);
+    return null;
+  }
+  
   // すべての壁のプロパティを事前に計算
-  if (fd.walls && fd.nodes) {
+  if (fd.walls) {
     fd.walls.forEach(w => calculateWallProps(w, fd.nodes));
   }
 
   const n1 = fd.nodes[beam.n1];
   const n2 = fd.nodes[beam.n2];
-  if (!n1 || !n2) return null;
+  if (!n1 || !n2) {
+    console.warn(`[calculateFoundationHorizontalStressData] Node not found for beam ${beam.id}. n1:${beam.n1}, n2:${beam.n2}`);
+    return null;
+  }
+
+  const dx = n2.x - n1.x;
+  const dy = n2.y - n1.y;
+  const totalL = Math.hypot(dx, dy) / 1000;
+  const isBeamHorizontal = Math.abs(dx) > Math.abs(dy);
 
   const supports = findSupportsOnBeam(beam, fd.nodes, fd.columns);
-  const totalL = Math.hypot(n2.x - n1.x, n2.y - n1.y) / 1000;
-
+  
   const rawPoints = [];
   rawPoints.push({ type: 'start', id: n1.id, x: n1.x, y: n1.y, dist: 0 });
   supports.forEach(s => {
@@ -306,10 +318,6 @@ export const calculateFoundationHorizontalStressData = function(beam, fd, curren
     }
     points.push(p);
   });
-
-  const dx = n2.x - n1.x;
-  const dy = n2.y - n1.y;
-  const isBeamHorizontal = Math.abs(dx) > Math.abs(dy);
   
   const calcDir = (mode) => {
     const results = [];
@@ -350,7 +358,13 @@ export const calculateFoundationHorizontalStressData = function(beam, fd, curren
             targetCase = matchingDirs.reduce((prev, curr) => (Math.abs(curr.Ne_bot) > Math.abs(prev.Ne_bot)) ? curr : prev);
           }
         }
-        Td = (targetCase && targetCase.Td !== undefined && !isNaN(targetCase.Td)) ? targetCase.Td : 0;
+        if (model === 'column_supports') {
+          // 柱直下支点モデルでは反曲点高比(B)による低減を行わない軸力(Ni)を使用する
+          Td = (targetCase && targetCase.totalNi_bot !== undefined && !isNaN(targetCase.totalNi_bot)) ? targetCase.totalNi_bot : 0;
+        } else {
+          // 従来の両端支点モデルでは、柱モーダルの判定に合わせ Td を使用
+          Td = (targetCase && targetCase.Td !== undefined && !isNaN(targetCase.Td)) ? targetCase.Td : 0;
+        }
       }
       return { ...p, Td };
     });
@@ -444,5 +458,3 @@ export const calculateFoundationHorizontalStressData = function(beam, fd, curren
   };
   return { points, resL: calcDir('L'), resR: calcDir('R'), totalL };
 };
-
-

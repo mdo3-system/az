@@ -108,7 +108,9 @@ export function normalizeBeam(b) {
     
     // 応力データ等の中間計算値もロード・履歴復元用に保持
     stressData: b.stressData || null,
-    calcResult: b.calcResult || null
+    calcResult: b.calcResult || null,
+    
+    calcModel: b.calcModel || 'span_supports'
   };
 }
 
