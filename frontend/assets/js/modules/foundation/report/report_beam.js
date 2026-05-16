@@ -401,9 +401,6 @@ export const generateBeamResultMatrixHtml = function(beam, fd, horizontalData, s
   `;
 };
 
-  return stressPointsTable + resultMatrix;
-};
-
 /**
  * 単純梁モデル（柱間モデル）の計算表を生成する
  */
