@@ -393,7 +393,7 @@ export const generateBeamResultMatrixHtml = function(beam, fd, horizontalData, s
       <table style="width:100%; border-collapse:collapse; font-size:${isPrinting?'9px':'10px'}; border:${isPrinting?'2px solid #000':'2px solid #555'}; text-align:center; margin-bottom:20px;">
         <thead style="background:${isPrinting?'#ddd':'#1a1a1a'}; color:${styles.text};">
           <tr><th rowspan="2" style="${borderStyle}">柱間</th><th colspan="3" style="${borderStyle}">長期</th><th colspan="2" style="${borderStyle}">短期 左加力（下加力）</th><th colspan="2" style="${borderStyle}">短期 右加力（上加力）</th><th rowspan="2" style="${borderStyle}">判定</th></tr>
-          <tr><th style="${borderStyle}">M中/<br>下端Ma</th><th style="${borderStyle}">M端/<br>上端Ma</th><th style="${borderStyle}">Q<sub>L</sub>/lQa</th><th style="${borderStyle}">M端+M水/<br>sMa</th><th style="${borderStyle}">Q+${shortTermN}Qe/<br>sQa</th><th style="${borderStyle}">M端+M水/<br>sMa</th><th style="${borderStyle}">Q+${shortTermN}Qe/<br>sQa</th></tr>
+          <tr><th style="${borderStyle}">M中/<br>上端Ma</th><th style="${borderStyle}">M端/<br>下端Ma</th><th style="${borderStyle}">Q<sub>L</sub>/lQa</th><th style="${borderStyle}">M端+M水/<br>sMa</th><th style="${borderStyle}">Q+${shortTermN}Qe/<br>sQa</th><th style="${borderStyle}">M端+M水/<br>sMa</th><th style="${borderStyle}">Q+${shortTermN}Qe/<br>sQa</th></tr>
         </thead>
         <tbody>${table5Rows}</tbody>
       </table>

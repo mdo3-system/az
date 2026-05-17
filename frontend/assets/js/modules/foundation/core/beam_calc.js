@@ -492,13 +492,12 @@ export const calculateDetailedBeamCheckResults = function(beam, fd, horizontalDa
         const resS = calculateSpanStrength({ D: sDepth, b: sWidth, dt: sDt, at: sAt, aw: sAw, pitch: sPitch, alpha: alphaS }, material);
 
         const ratios = {
-            rL_mid: absMLongMid / resB.Ma,
-            rL_end: absMLongEnd / resT.Ma,
+            rL_mid: absMLongMid / resT.Ma,  // 長期中央モーメント (上部引張) vs 上端主筋許容耐力
+            rL_end: absMLongEnd / resB.Ma,  // 長期端部モーメント (下部引張) vs 下端主筋許容耐力
             rL_Q  : absQLong / resT.Qa,
-            rSL_M : Math.max(Msht_L_left, Msht_L_right) / resT.Mas,
+            rSL_M : Math.max(Msht_L_left, Msht_L_right) / Math.min(resT.Mas, resB.Mas), // 左加力短期曲げ vs 短期主筋耐力 (上端・下端の安全側)
             rSL_Q : Qsht_L / resS.Qas,
-            rSR_M : Math.max(Msht_R_left, Msht_R_right) / resT.Mas,
-            rSR_Q : Qsht_R / resS.Qas
+            rSR_M : Math.max(Msht_R_left, Msht_R_right) / Math.min(resT.Mas, resB.Mas), // 右加力短期曲げ vs 短期主筋耐力 (上端・下端の安全側)
         };
         const maxR = Math.max(...Object.values(ratios));
 
