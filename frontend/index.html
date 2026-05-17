@@ -156,22 +156,130 @@
 
   /* ─── TOOLBAR & UTILS ─────────── */
 
-  .tool-group { display: flex; flex-direction: column; gap: 3px; }
+  .tool-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
   .tool-btn {
-    display: flex; align-items: center; gap: 8px;
-    padding: 7px 12px; border: 1px solid transparent; border-radius: var(--radius-sm);
-    background: transparent; color: var(--text-secondary); font-size: 12px;
-    cursor: pointer; transition: all 0.15s; text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    text-align: left;
+    position: relative;
+    overflow: hidden;
   }
-  .tool-btn:hover { background: var(--bg-panel-alt); color: var(--text-primary); }
-  .tool-btn.active {
-    background: var(--accent-dim); color: var(--accent); border-color: rgba(91,138,254,0.3);
+  .tool-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+    border-color: var(--text-muted);
+    transform: translateY(-1px);
   }
-  .tool-btn .tool-icon { font-size: 14px; width: 20px; text-align: center; }
+  .tool-btn:active {
+    transform: translateY(0);
+  }
+  .tool-btn .tool-icon {
+    font-size: 13px;
+    width: 16px;
+    text-align: center;
+    transition: transform 0.2s;
+  }
+  .tool-btn:hover .tool-icon {
+    transform: scale(1.15);
+  }
   .tool-btn .tool-key {
-    margin-left: auto; font-size: 10px; font-family: var(--mono);
-    color: var(--text-muted); background: var(--bg-input); padding: 1px 5px;
-    border-radius: 3px;
+    position: absolute;
+    right: 4px;
+    top: 4px;
+    font-size: 7px;
+    font-family: var(--mono);
+    color: var(--text-muted);
+    background: rgba(0, 0, 0, 0.3);
+    padding: 0px 3px;
+    border-radius: 2px;
+    opacity: 0.6;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  /* ─── ツール別アクティブ配色 ─── */
+  .tool-btn[data-tool="selectGrid"].active {
+    background: rgba(52, 152, 219, 0.15) !important;
+    color: #5dade2 !important;
+    border-color: rgba(52, 152, 219, 0.5) !important;
+    box-shadow: 0 0 10px rgba(52, 152, 219, 0.2);
+    font-weight: bold;
+  }
+  .tool-btn[data-tool="skewedGrid"].active {
+    background: rgba(41, 128, 185, 0.18) !important;
+    color: #3498db !important;
+    border-color: rgba(41, 128, 185, 0.6) !important;
+    box-shadow: 0 0 10px rgba(41, 128, 185, 0.25);
+    font-weight: bold;
+  }
+  .tool-btn[data-tool="column"].active {
+    background: rgba(230, 126, 34, 0.15) !important;
+    color: #f39c12 !important;
+    border-color: rgba(230, 126, 34, 0.5) !important;
+    box-shadow: 0 0 10px rgba(230, 126, 34, 0.2);
+    font-weight: bold;
+  }
+  .tool-btn[data-tool="wall"].active {
+    background: rgba(231, 76, 60, 0.15) !important;
+    color: #e74c3c !important;
+    border-color: rgba(231, 76, 60, 0.5) !important;
+    box-shadow: 0 0 10px rgba(231, 76, 60, 0.2);
+    font-weight: bold;
+  }
+  .tool-btn[data-tool="diaphragm"].active {
+    background: rgba(155, 89, 182, 0.15) !important;
+    color: #af7ac5 !important;
+    border-color: rgba(155, 89, 182, 0.5) !important;
+    box-shadow: 0 0 10px rgba(155, 89, 182, 0.2);
+    font-weight: bold;
+  }
+  .tool-btn[data-tool="slab"].active {
+    background: rgba(0, 188, 212, 0.15) !important;
+    color: #00bcd4 !important;
+    border-color: rgba(0, 188, 212, 0.5) !important;
+    box-shadow: 0 0 10px rgba(0, 188, 212, 0.2);
+    font-weight: bold;
+  }
+  .tool-btn[data-tool="fbeam"].active {
+    background: rgba(26, 188, 156, 0.15) !important;
+    color: #1abc9c !important;
+    border-color: rgba(26, 188, 156, 0.5) !important;
+    box-shadow: 0 0 10px rgba(26, 188, 156, 0.2);
+    font-weight: bold;
+  }
+  .tool-btn[data-tool="beam"].active {
+    background: rgba(46, 204, 113, 0.15) !important;
+    color: #2ecc71 !important;
+    border-color: rgba(46, 204, 113, 0.5) !important;
+    box-shadow: 0 0 10px rgba(46, 204, 113, 0.2);
+    font-weight: bold;
+  }
+  .tool-btn[data-tool="delete"].active {
+    background: rgba(231, 76, 60, 0.2) !important;
+    color: #ff6b6b !important;
+    border-color: rgba(231, 76, 60, 0.7) !important;
+    box-shadow: 0 0 12px rgba(231, 76, 60, 0.3);
+    font-weight: bold;
+  }
+  .tool-btn[data-tool="selectElem"].active {
+    background: rgba(241, 196, 15, 0.15) !important;
+    color: #f1c40f !important;
+    border-color: rgba(241, 196, 15, 0.6) !important;
+    box-shadow: 0 0 10px rgba(241, 196, 15, 0.2);
+    font-weight: bold;
   }
 
   .dxf-upload-area {
@@ -230,7 +338,7 @@
   <div class="topbar">
     <div class="topbar-brand">
       <span class="topbar-logo">AZ斜め壁補助計算Web-CAD</span>
-      <span class="topbar-version" style="margin-left: 8px; font-size: 11px; color: var(--text-secondary); opacity: 0.8;">v3.1.13</span>
+      <span class="topbar-version" style="margin-left: 8px; font-size: 11px; color: var(--text-secondary); opacity: 0.8;">v3.1.14</span>
     </div>
     <div class="topbar-floor-tabs" id="floorTabs">
       <button data-floor="PH">PH階</button>
@@ -240,7 +348,18 @@
       <button data-floor="1" class="active">1F / 基礎</button>
       <button onclick="window.fitAll()" style="margin-left:8px; background:var(--bg-panel-alt); border-color:var(--accent); color:var(--accent);">全体</button>
     </div>
-    <div style="display:flex; align-items:center; gap:10px;">
+    <div style="display:flex; align-items:center; gap:8px;">
+      <!-- 戻る・進む -->
+      <div style="display:flex; gap:4px;">
+        <button id="btnUndo" class="tool-btn" style="padding:6px 12px; background:var(--bg-panel-alt); font-size:11px;" title="元に戻す (Ctrl+Z)"><span class="tool-icon">↩</span> 戻る</button>
+        <button id="btnRedo" class="tool-btn" style="padding:6px 12px; background:var(--bg-panel-alt); font-size:11px;" title="やり直す (Ctrl+Y)"><span class="tool-icon">↪</span> 進む</button>
+      </div>
+      <div style="width:1px; height:16px; background:var(--border); margin:0 4px;"></div>
+      <!-- 読込・保存 -->
+      <div style="display:flex; gap:4px;">
+        <button class="tool-btn" onclick="document.getElementById('json-upload').click()" style="padding:6px 12px; background:var(--bg-panel-alt); font-size:11px;" title="プロジェクトファイルを読み込む"><span class="tool-icon">📂</span> 読込</button>
+        <button id="btn-save-json" type="button" class="tool-btn" style="padding:6px 12px; background:var(--bg-panel-alt); font-size:11px;" title="プロジェクトファイルを保存する"><span class="tool-icon">📥</span> 保存</button>
+      </div>
     </div>
   </div>
 
@@ -249,9 +368,15 @@
     <!-- ─── LEFT: Properties & List ─── -->
     <div class="panel-left" id="sidebar">
       <!-- ─── MANUAL ─── -->
-      <button onclick="window.openManualModal()" class="side-btn" style="width:100%; padding:12px; font-weight:bold; background:var(--primary); color:#fff; border:none; margin-bottom:15px; border-bottom:2px solid var(--accent); display:flex; align-items:center; justify-content:center; gap:8px;">
-        <span style="font-size:18px;">📖</span> 操作マニュアルを表示
-      </button>
+      <!-- ─── MANUAL & REPORT ─── -->
+      <div class="panel-section" style="padding: 10px 14px; border-bottom:1px solid var(--border);">
+        <button onclick="window.openManualModal()" class="side-btn" style="width:100%; padding:11px; font-weight:bold; background:var(--primary); color:#fff; border:none; margin-bottom:8px; border-bottom:2px solid var(--accent); display:flex; align-items:center; justify-content:center; gap:8px; border-radius:var(--radius);">
+          <span style="font-size:16px;">📖</span> 操作マニュアルを表示
+        </button>
+        <button class="side-btn" onclick="showCalculationReport()" style="width:100%; padding:11px; font-weight:bold; background:var(--accent); color:#fff; border:none; display:flex; align-items:center; justify-content:center; gap:8px; border-radius:var(--radius);" title="全階の構造計算書を一括出力します">
+          <span style="font-size:16px;">📊</span> 計算書出力 (PDF)
+        </button>
+      </div>
 
       <!-- ─── DXF / ARKITREND ─── -->
       <!-- 全体設計条件は右パネルへ移動しました -->
@@ -373,26 +498,14 @@
         </div>
       </div>
 
-      <!-- ─── SETTINGS ─── -->
-      <div class="panel-section">
-        <div class="panel-section-title">設定・保存</div>
-        <button class="tool-btn" onclick="showCalculationReport()" style="width:100%; justify-content:center; background:var(--accent); color:#fff; border:none; margin-bottom:8px; font-weight:bold;">
-          📊 計算書出力 (PDF)
-        </button>
-        <div style="display:flex; gap:4px; margin-bottom:4px;">
-          <button id="btn-save-json" type="button" class="tool-btn" style="flex:1; justify-content:center;">📥 保存</button>
-          <button class="tool-btn" onclick="document.getElementById('json-upload').click()" style="flex:1; justify-content:center;">📂 読込</button>
-        </div>
-        <input type="file" id="json-upload" accept=".json" style="display:none;">
-      </div>
+      <!-- Hidden file input for JSON configuration loading -->
+      <input type="file" id="json-upload" accept=".json" style="display:none;">
+      <div id="app-version" style="position:fixed; bottom:10px; right:10px; color:#666; font-size:10px; z-index:9999; pointer-events:none;">v3.1.14</div>
     </div>
 
     <!-- ─── CENTER: Canvas ─── -->
     <div class="canvas-wrap" id="canvasWrap">
-      <div class="undo-redo-panel no-print">
-        <button id="btnUndo" class="tool-btn" style="background:var(--bg-panel); box-shadow: 0 2px 4px rgba(0,0,0,0.2);"><span class="tool-icon">↩</span> 戻る</button>
-        <button id="btnRedo" class="tool-btn" style="background:var(--bg-panel); box-shadow: 0 2px 4px rgba(0,0,0,0.2);"><span class="tool-icon">↪</span> 進む</button>
-      </div>
+      <!-- Legacy Undo/Redo removed from float overlay -->
       <canvas id="cadCanvas"></canvas>
       <div class="canvas-snap-indicator" id="snapIndicator"></div>
       <div class="canvas-hud no-print" id="canvasHud">X: 0  Y: 0  |  Zoom: 1.00</div>
