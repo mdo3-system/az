@@ -498,6 +498,7 @@ export const calculateDetailedBeamCheckResults = function(beam, fd, horizontalDa
             rSL_M : Math.max(Msht_L_left, Msht_L_right) / Math.min(resT.Mas, resB.Mas), // 左加力短期曲げ vs 短期主筋耐力 (上端・下端の安全側)
             rSL_Q : Qsht_L / resS.Qas,
             rSR_M : Math.max(Msht_R_left, Msht_R_right) / Math.min(resT.Mas, resB.Mas), // 右加力短期曲げ vs 短期主筋耐力 (上端・下端の安全側)
+            rSR_Q : Qsht_R / resS.Qas
         };
         const maxR = Math.max(...Object.values(ratios));
 
