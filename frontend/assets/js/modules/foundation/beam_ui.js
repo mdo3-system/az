@@ -1,9 +1,76 @@
-import { floorData, currentFloor, pushHistory } from './foundation_cad.js';
+import { floorData, currentFloor, FLOORS, pushHistory } from './foundation_cad.js';
 import { handlePropChange } from './state_manager.js';
 import { makeDraggable } from './ui_utils.js';
 import { calcBeamResult } from './events/beam_ui_handlers.js';
 import { generateFoundationHorizontalStressTable } from './report/report_beam.js';
 import { drawBeamStressOnCanvas } from './stress_display.js';
+import { calculateDetailedBeamCheckResults } from './core/beam_calc.js';
+import { calculateFoundationHorizontalStressData } from './core/column_calc.js';
+
+export const hasBeamNG = function(beam, fd) {
+    if (!beam || !fd) return false;
+    
+    let horizontalData;
+    if (beam.calcModel === 'simple_beam') {
+        horizontalData = {
+            resL: Array(20).fill({}).map(() => ({ Td: 0, R: 0, Qe: 0, M_f: 0 })),
+            resR: Array(20).fill({}).map(() => ({ Td: 0, R: 0, Qe: 0, M_f: 0 })),
+            points: Array(20).fill({}).map((_, idx) => ({ id: `P${idx}`, dist: idx * 2.0 }))
+        };
+    } else {
+        if (typeof calculateFoundationHorizontalStressData === 'function') {
+            horizontalData = calculateFoundationHorizontalStressData(fd, beam, '1', window.floorData || { '1': fd }, FLOORS, beam.calcModel || 'span_supports');
+        }
+    }
+    
+    if (!horizontalData) return false;
+
+    const shortTermN = parseFloat((fd && fd.shortTermN) || window.shortTermN || 2.0);
+    let checkResults = [];
+    if (typeof calculateDetailedBeamCheckResults === 'function') {
+        checkResults = calculateDetailedBeamCheckResults(beam, fd, horizontalData, shortTermN);
+    }
+    
+    if (!checkResults || checkResults.length === 0) return false;
+
+    const hasSpanNG = checkResults.some(res => !res.isOk);
+    if (hasSpanNG) return true;
+
+    const axis = beam.axisName || beam.axis;
+    if (axis) {
+        let totalM12 = 0, totalM16 = 0;
+        [...(fd.beams||[]), ...(fd.perimeterBeams||[])].forEach(b => {
+           if ((b.axisName || b.axis) === axis) {
+             totalM12 += (b.anchorM12 || 0);
+             totalM16 += (b.anchorM16 || 0);
+           }
+        });
+        
+        const ANCHOR_MASTER = {
+            'J1': { M12: 9.180, M16: 16.320 },
+            'J2': { M12: 8.620, M16: 15.330 },
+            'J3': { M12: 8.020, M16: 14.260 }
+        };
+        const jData = ANCHOR_MASTER[fd.anchorJType] || ANCHOR_MASTER['J1'];
+        const sumQaa = (totalM12 * jData.M12) + (totalM16 * jData.M16);
+
+        let qaX = 0, qaY = 0;
+        fd.walls.forEach(wall => {
+          if (wall.axisName === axis) {
+            const len = wall.lengthOverride ? parseFloat(wall.lengthOverride) : (wall.length_m ? wall.length_m * 1000 : 0);
+            qaX += (wall.multiplier_x || 0) * 1.96 * (len / 1000);
+            qaY += (wall.multiplier_y || 0) * 1.96 * (len / 1000);
+          }
+        });
+        const sumQa = Math.max(qaX, qaY);
+        const ratio = sumQaa > 0 ? (sumQa / sumQaa) : (sumQa > 0 ? 9.999 : 0);
+        if (ratio > 1.0) {
+            return true;
+        }
+    }
+
+    return false;
+};
 
 // 1. 梁ポップアップの一時データ保存
 export const saveBeamPopupData = function(type, index, field, value) {
@@ -49,6 +116,10 @@ export const openBeamStressPopup = function(type, index) {
   const fd = floorData[currentFloor];
   const beam = type === 'beam' ? fd.beams[index] : fd.perimeterBeams[index];
   if (!beam) return;
+
+  if (hasBeamNG(beam, fd)) {
+    alert('NGがあります');
+  }
 
   if (!fd.anchorJType) fd.anchorJType = 'J1';
   if (beam.anchorM12 === undefined) beam.anchorM12 = 0;
@@ -278,6 +349,16 @@ export const openBeamStressPopup = function(type, index) {
 
 // 4. 梁ポップアップを閉じる
 export const closeBeamStressPopup = function() {
+    const type = window.highlightedBeamType;
+    const index = window.highlightedBeamIndex;
+    if (type && index !== null && index !== undefined) {
+        const fd = floorData[currentFloor];
+        const beam = type === 'beam' ? fd.beams[index] : fd.perimeterBeams[index];
+        if (beam && hasBeamNG(beam, fd)) {
+            alert('NGがあります');
+        }
+    }
+
     const existing = document.getElementById('beamStressModal');
     if (existing) existing.remove();
 

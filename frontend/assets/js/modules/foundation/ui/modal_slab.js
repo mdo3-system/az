@@ -24,6 +24,10 @@ export const openSlabDetailModal = (index) => {
     calculateAndSetSlabAIJStress(sl, fd.nodes);
     const data = sl.aijData || {};
 
+    if (currentFloor === '1' && !data.isOK) {
+        alert('NGがあります');
+    }
+
     const resultText = data.isOK ? "判定：OK" : "判定：NG";
     const badgeColor = data.isOK ? "#27ae60" : "#e74c3c";
     const color_s = (data.ratioX > 1.0) ? "#e74c3c" : "#aaa";
@@ -193,6 +197,8 @@ export const openSlabEditor = (index) => {
     const existing = document.getElementById('slab-editor-modal');
     if(existing && existing.parentNode) existing.remove();
 
+    window.highlightedSlabIndex = index;
+
     const currentFloorKey = (currentFloor || '1');
     const fd = (typeof floorData !== 'undefined' ? floorData : window.floorData)[currentFloorKey];
     if (!fd || !fd.slabs || !fd.slabs[index]) return;
@@ -200,6 +206,10 @@ export const openSlabEditor = (index) => {
 
     calculateAndSetSlabAIJStress(sl, fd.nodes);
     const data = sl.aijData || {};
+
+    if (currentFloor === '1' && (data.ratioX > 1.0 || data.ratioY > 1.0)) {
+        alert('NGがあります');
+    }
 
     const thicknesses = [100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200];
     const rebars = ['D10', 'D13', 'D16', 'D10+D13', 'D13+D16'];
@@ -312,13 +322,42 @@ export const openSlabEditor = (index) => {
 };
 
 export const closeSlabDetailModal = () => {
+    if (currentFloor === '1' && window.highlightedSlabIndex !== null && window.highlightedSlabIndex !== undefined) {
+        const fd = (typeof floorData !== 'undefined' ? floorData : window.floorData)[currentFloor];
+        if (fd && fd.slabs) {
+            const sl = fd.slabs[window.highlightedSlabIndex];
+            if (sl) {
+                calculateAndSetSlabAIJStress(sl, fd.nodes);
+                const data = sl.aijData || {};
+                if (!data.isOK) {
+                    alert('NGがあります');
+                }
+            }
+        }
+    }
+
     if (window.safeRemoveById) window.safeRemoveById('slab-modal-overlay');
     window.highlightedSlabIndex = null;
     if (typeof callRender === 'function') callRender();
 };
 
 export const closeSlabEditor = () => {
+    if (currentFloor === '1' && window.highlightedSlabIndex !== null && window.highlightedSlabIndex !== undefined) {
+        const fd = (typeof floorData !== 'undefined' ? floorData : window.floorData)[currentFloor];
+        if (fd && fd.slabs) {
+            const sl = fd.slabs[window.highlightedSlabIndex];
+            if (sl) {
+                calculateAndSetSlabAIJStress(sl, fd.nodes);
+                const data = sl.aijData || {};
+                if (data.ratioX > 1.0 || data.ratioY > 1.0) {
+                    alert('NGがあります');
+                }
+            }
+        }
+    }
+
     if (window.safeRemoveById) window.safeRemoveById('slab-editor-modal');
+    window.highlightedSlabIndex = null;
     document.querySelectorAll('.property-panel, #property-panel, .ui-dialog').forEach(el => {
         el.style.visibility = 'visible';
         el.style.pointerEvents = 'auto';

@@ -1,5 +1,8 @@
 import { floorData, currentFloor, FLOORS, dxfVAxes, dxfHAxes, dxfSkewedAxes } from './foundation_cad.js';
 import { ANCHOR_BOLT_MASTER } from './foundation_calc.js';
+import { calculateAndSetSlabAIJStress } from './core/slab_calc.js';
+import { calculateDetailedBeamCheckResults } from './core/beam_calc.js';
+import { calculateFoundationHorizontalStressData } from './core/column_calc.js';
 
 /**
  * 構造計算書（HTMLレポート）の生成と表示
@@ -7,6 +10,114 @@ import { ANCHOR_BOLT_MASTER } from './foundation_calc.js';
 export const showCalculationReport = function() {
   const reportContent = document.getElementById('reportContent');
   if (!reportContent) return;
+
+  // ─── 全計算要素の NG チェック ───
+  const ngItems = [];
+  const floorsToCheck = ['PH', 'R', '3', '2', '1'];
+
+  floorsToCheck.forEach(fKey => {
+    const fData = (window.allFloorData && window.allFloorData[fKey]) || (window.floorData && window.floorData[fKey]) || floorData[fKey];
+    if (!fData) return;
+
+    // A. スラブのチェック
+    if (fData.slabs) {
+      fData.slabs.forEach((sl) => {
+        if (typeof calculateAndSetSlabAIJStress === 'function') {
+          calculateAndSetSlabAIJStress(sl, fData.nodes);
+        }
+        const data = sl.aijData || {};
+        if (data.ratioX > 1.0 || data.ratioY > 1.0) {
+          const floorName = fKey === '1' ? '1F / 基礎' : `${fKey}階`;
+          let details = [];
+          if (data.ratioX > 1.0) details.push(`短辺検定比: ${data.ratioX.toFixed(3)}`);
+          if (data.ratioY > 1.0) details.push(`長辺検定比: ${data.ratioY.toFixed(3)}`);
+          ngItems.push(`・${floorName} スラブ [${sl.id || 'S'}] (${details.join(', ')})`);
+        }
+      });
+    }
+
+    // B. 基礎梁のチェック (1Fのみ)
+    if (fKey === '1') {
+      const beamsList = [...(fData.beams || []), ...(fData.perimeterBeams || [])];
+      beamsList.forEach(beam => {
+        let horizontalData;
+        if (beam.calcModel === 'simple_beam') {
+          horizontalData = {
+            resL: Array(20).fill({}).map(() => ({ Td: 0, R: 0, Qe: 0, M_f: 0 })),
+            resR: Array(20).fill({}).map(() => ({ Td: 0, R: 0, Qe: 0, M_f: 0 })),
+            points: Array(20).fill({}).map((_, idx) => ({ id: `P${idx}`, dist: idx * 2.0 }))
+          };
+        } else {
+          if (typeof calculateFoundationHorizontalStressData === 'function') {
+            horizontalData = calculateFoundationHorizontalStressData(fData, beam, '1', window.floorData || floorData, FLOORS, beam.calcModel || 'span_supports');
+          }
+        }
+
+        if (horizontalData) {
+          const shortTermN = parseFloat((fData.shortTermN) || window.shortTermN || 2.0);
+          let checkResults = [];
+          if (typeof calculateDetailedBeamCheckResults === 'function') {
+            checkResults = calculateDetailedBeamCheckResults(beam, fData, horizontalData, shortTermN);
+          }
+
+          if (checkResults && checkResults.length > 0) {
+            checkResults.forEach(res => {
+              if (!res.isOk) {
+                const maxRatio = Math.max(
+                  res.ratios.rL_mid || 0,
+                  res.ratios.rL_end || 0,
+                  res.ratios.rL_Q || 0,
+                  res.ratios.rSL_M || 0,
+                  res.ratios.rSL_Q || 0,
+                  res.ratios.rSR_M || 0,
+                  res.ratios.rSR_Q || 0
+                );
+                ngItems.push(`・基礎梁 [${beam.id || 'FG'}] スパン ${res.spanName}: 断面検定比 ${maxRatio.toFixed(3)}`);
+              }
+            });
+          }
+        }
+
+        // アンカーボルト検定
+        const axis = beam.axisName || beam.axis;
+        if (axis) {
+          let totalM12 = 0, totalM16 = 0;
+          beamsList.forEach(b => {
+             if ((b.axisName || b.axis) === axis) {
+               totalM12 += (b.anchorM12 || 0);
+               totalM16 += (b.anchorM16 || 0);
+             }
+          });
+          const ANCHOR_MASTER = {
+              'J1': { M12: 9.180, M16: 16.320 },
+              'J2': { M12: 8.620, M16: 15.330 },
+              'J3': { M12: 8.020, M16: 14.260 }
+          };
+          const jData = ANCHOR_MASTER[fData.anchorJType] || ANCHOR_MASTER['J1'];
+          const sumQaa = (totalM12 * jData.M12) + (totalM16 * jData.M16);
+
+          let qaX = 0, qaY = 0;
+          fData.walls.forEach(wall => {
+            if (wall.axisName === axis) {
+              const len = wall.lengthOverride ? parseFloat(wall.lengthOverride) : (wall.length_m ? wall.length_m * 1000 : 0);
+              qaX += (wall.multiplier_x || 0) * 1.96 * (len / 1000);
+              qaY += (wall.multiplier_y || 0) * 1.96 * (len / 1000);
+            }
+          });
+          const sumQa = Math.max(qaX, qaY);
+          const ratio = sumQaa > 0 ? (sumQa / sumQaa) : (sumQa > 0 ? 9.999 : 0);
+          if (ratio > 1.0) {
+            ngItems.push(`・基礎梁 [${beam.id || 'FG'}] ${axis}通り: アンカーボルト検定比 ${ratio.toFixed(3)}`);
+          }
+        }
+      });
+    }
+  });
+
+  if (ngItems.length > 0) {
+    const alertMsg = "【計算警告】以下の項目にNGがあります。\n\n" + ngItems.slice(0, 15).join("\n") + (ngItems.length > 15 ? `\n...他 ${ngItems.length - 15} 件` : "") + "\n\nこのまま計算書を出力します。";
+    alert(alertMsg);
+  }
 
   // 0. 全階層共通の描画範囲（スケール）を確定させる
   const relevantFloors = ['PH', 'R', '3', '2', '1'];
