@@ -409,24 +409,34 @@ export const getRebarArea = function(spec, mode = 'sum') {
 
 /**
  * 基礎梁スパン別の許容耐力を算出する
+ * 💡 D/dt/b の単位チェック: m単位（<5の場合）で渡された場合は mm に変換する
  */
 export const calculateSpanStrength = function(span, material = { ft: 195, fs: 0.7, fts: 295, fss: 1.05 }) {
-    const b = span.b || 150;
-    const D = span.D || 640;
-    const dt = span.dt || 70;
+    let b = span.b || 150;
+    let D = span.D || 640;
+    let dt = span.dt || 70;
     const at = span.at || 253.4;
     const aw = span.aw || 142.6;
     const p = span.pitch || 200;
-    const alpha = span.alpha || 1.0; 
+    const alpha = span.alpha || 1.0;
+
+    // 💡 単位安全チェック: D,b が明らかに m 単位（< 5.0）で渡された場合は mm に換算
+    if (D > 0 && D < 5.0)  D  = D  * 1000;
+    if (b > 0 && b < 1.0)  b  = b  * 1000;
+    if (dt > 0 && dt < 1.0) dt = dt * 1000;
+    // 💡 逆に D が異常に大きい（> 5000mm）場合はデフォルトに戻す
+    if (D > 5000 || D <= 0)  D  = 640;
+    if (b > 2000 || b <= 0)  b  = 150;
+    if (dt >= D || dt <= 0)  dt = 70;
 
     const d = D - dt;
-    const j = 0.875 * d; 
+    const j = 0.875 * d;
 
-    const Ma = material.ft * at * j / 1000000;      
-    const Mas = material.fts * at * j / 1000000;    
+    const Ma = material.ft * at * j / 1000000;
+    const Mas = material.fts * at * j / 1000000;
 
-    const Qa = material.fs * b * j / 1000;           
-    const Qas = (material.fss * b * j + alpha * material.fts * (aw * j / p)) / 1000; 
+    const Qa = material.fs * b * j / 1000;
+    const Qas = (material.fss * b * j + alpha * material.fts * (aw * j / p)) / 1000;
 
     return { Ma, Mas, Qa, Qas, d, j };
 };
@@ -448,21 +458,25 @@ export const calculateDetailedBeamCheckResults = function(beam, fd, horizontalDa
         const spanLen = Math.hypot(points[i+1].x - points[i].x, points[i+1].y - points[i].y) / 1000;
         
         const s = (beam.spans && beam.spans[i]) || {};
-        const sDepth = s.D || 640;
-        const sWidth = s.b || 300;
-        const sDt = s.dt || 70;
-        const sTopR = s.topRebar || '2-D16';
-        const sBotR = s.bottomRebar || '2-D16';
-        const sStirrup = s.stirrup || 'D10';
-        const sPitch = s.pitch || 200;
+        // 💡 スパンデータから梁成(D)・幅(b)・かぶり(dt)を取得。キー名 D/depth 両対応で堅牢化
+        const rawD  = s.D !== undefined ? s.D  : (s.depth !== undefined ? s.depth  : beam.depth);
+        const rawB  = s.b !== undefined ? s.b  : (s.width !== undefined ? s.width  : beam.width);
+        const rawDt = s.dt !== undefined ? s.dt : (s.dt    !== undefined ? s.dt     : beam.dt);
+        const sDepth  = (rawD  && rawD  > 0 && rawD  <= 5000) ? rawD  : 640;
+        const sWidth  = (rawB  && rawB  > 0 && rawB  <= 2000) ? rawB  : 150;
+        const sDt     = (rawDt && rawDt > 0 && rawDt < sDepth) ? rawDt : 70;
+        const sTopR = s.topRebar    || beam.topRebar    || '2-D16';
+        const sBotR = s.bottomRebar || beam.bottomRebar || '2-D16';
+        const sStirrup = s.stirrup  || s.stirrupRebar   || beam.stirrupRebar || 'D10';
+        const sPitch   = s.pitch    || s.stirrupPitch   || beam.stirrupPitch  || 200;
         
         const sAt = getRebarArea(sTopR);
         const sAtBot = getRebarArea(sBotR);
         const sAw = getRebarArea(sStirrup);
         
-        const sB       = (stress && stress.spans && stress.spans[i]) ? (stress.spans[i].B ?? 0) : (beam.tributaryWidth || 0);
-        const sSigma   = (stress && stress.spans && stress.spans[i]) ? (stress.spans[i].sigma_e ?? 0) : (beam.groundPressure || 0);
-        const sW       = (sSigma * sB);
+        const sB     = (stress && stress.spans && stress.spans[i]) ? (stress.spans[i].B     ?? 0) : (beam.tributaryWidth  || 0);
+        const sSigma = (stress && stress.spans && stress.spans[i]) ? (stress.spans[i].sigma_e ?? 0) : (beam.groundPressure || 0);
+        const sW     = (sSigma * sB);
         
         const curM_mid = (sW * spanLen * spanLen) / 8.0;
         const curM_end = (sW * spanLen * spanLen) / 12.0;
