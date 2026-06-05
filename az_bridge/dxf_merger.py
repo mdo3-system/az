@@ -5,6 +5,33 @@ import ezdxf
 
 logger = logging.getLogger(__name__)
 
+def ensure_utf8_dxf(filepath: str) -> None:
+    """
+    R2007以降の形式でありながらShift-JISで書かれたDXFファイルを、
+    安全にUTF-8にデコードして上書き保存します。
+    """
+    try:
+        with open(filepath, "rb") as f:
+            content = f.read()
+            
+        try:
+            content.decode("utf-8")
+            return  # 正常にUTF-8でデコードできれば変換不要
+        except UnicodeDecodeError:
+            pass
+            
+        text = content.decode("cp932", errors="replace")
+        
+        if "$DWGCODEPAGE" in text:
+            text = text.replace("ANSI_932", "UTF-8")
+            
+        with open(filepath, "w", encoding="utf-8", errors="replace") as f:
+            f.write(text)
+            
+        logger.info(f"Successfully converted {filepath} to UTF-8")
+    except Exception as e:
+        logger.warning(f"Failed to ensure UTF-8 for {filepath}: {e}")
+
 # 名寄せルール
 RENAME_MAP = {
     "通り芯": "GLID",
@@ -89,6 +116,7 @@ def merge_dxf_files(files_dict: dict[str, str]) -> tuple[str, int]:
     
     for label, temp_path in files_dict.items():
         try:
+            ensure_utf8_dxf(temp_path)
             doc = ezdxf.readfile(temp_path)
             msp = doc.modelspace()
             floor_ent_count = 0

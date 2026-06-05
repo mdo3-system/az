@@ -164,6 +164,8 @@ class DxfParser:
 
     def _read_dxf_with_fallback(self) -> Drawing:
         """ezdxf → cp932 → utf-8 のフォールバックチェーン。"""
+        from az_bridge.dxf_merger import ensure_utf8_dxf
+        ensure_utf8_dxf(str(self._filepath))
         for enc in [None, "cp932", "utf-8"]:
             try:
                 if enc:

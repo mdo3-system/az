@@ -306,7 +306,7 @@ export const calculateFoundationHorizontalStressData = function(fd, beam, curren
       dist: s.distFromStart, colIndex: fd.columns.indexOf(s.col) 
     });
   });
-  rawPoints.push({ type: 'end', id: n2.id, x: n2.x, y: n2.y, dist: totalL * 1000 });
+  rawPoints.push({ type: 'end', id: n2.id, x: n2.x, y: n2.y, dist: totalL });
 
   rawPoints.sort((a, b) => a.dist - b.dist);
   const points = [];
