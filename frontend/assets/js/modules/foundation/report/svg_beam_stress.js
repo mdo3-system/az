@@ -2,7 +2,7 @@
  * report/svg_beam_stress.js
  * 基礎梁 応力図 (M/Q/N) SVG生成モジュール
  */
-import { floorData } from '../foundation_cad.js';
+import { floorData, FLOORS } from '../foundation_cad.js';
 
 /**
  * 単一の基礎梁の応力図（M図・Q図）をSVGで生成する (短期/長期)
@@ -43,7 +43,7 @@ export function generateSingleBeamStressSvg(beam, calcRes) {
 export function generateSingleBeamNMQStressSvg(beam) {
   const fd = floorData['1'];
   if (!fd || !window.calculateFoundationHorizontalStressData) return '';
-  const data = window.calculateFoundationHorizontalStressData(fd, beam, '1', window.floorData || {}, window.FLOORS || [], beam.calcModel || 'span_supports');
+  const data = window.calculateFoundationHorizontalStressData(fd, beam, '1', floorData || {}, FLOORS || [], beam.calcModel || 'span_supports');
   if (!data) return '';
   const { points, resL, resR, totalL } = data;
   const svgW = 1000, svgH = 1100, marginX = 80, marginY = 40, plotW = svgW - marginX * 2, scaleX = plotW / (totalL || 1);

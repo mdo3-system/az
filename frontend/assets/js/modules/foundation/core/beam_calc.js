@@ -174,12 +174,35 @@ export const autoMergeCollinearBeams = function(fd) {
                         });
                         return;
                     }
+
+                    // マージ対象の梁の中で、デフォルト値から変更されているプロパティを優先して抽出
+                    const dp = (window.defaultProperties && window.defaultProperties['fbeam']) || {};
+                    const defW = dp.width || 300;
+                    const defD = dp.depth || 640;
+                    const defDt = dp.dt || 70;
+                    const defTop = dp.topRebar || '1-D13';
+                    const defBot = dp.bottomRebar || '1-D13';
+                    const defStirrup = dp.stirrupRebar || 'D10';
+                    const defPitch = dp.stirrupPitch || 200;
+
+                    let mergedProps = { ...bestRep };
+                    cluster.forEach(item => {
+                        const b = item.b;
+                        if (b.width !== undefined && b.width !== defW) mergedProps.width = b.width;
+                        if (b.depth !== undefined && b.depth !== defD) mergedProps.depth = b.depth;
+                        if (b.dt !== undefined && b.dt !== defDt) mergedProps.dt = b.dt;
+                        if (b.topRebar !== undefined && b.topRebar !== defTop) mergedProps.topRebar = b.topRebar;
+                        if (b.bottomRebar !== undefined && b.bottomRebar !== defBot) mergedProps.bottomRebar = b.bottomRebar;
+                        if (b.stirrupRebar !== undefined && b.stirrupRebar !== defStirrup) mergedProps.stirrupRebar = b.stirrupRebar;
+                        if (b.stirrupPitch !== undefined && b.stirrupPitch !== defPitch) mergedProps.stirrupPitch = b.stirrupPitch;
+                    });
+
                     newBeamsToAdd.push({
-                        ...bestRep,
+                        ...mergedProps,
                         type: 'foundation_beam',
                         n1: startNode,
                         n2: endNode,
-                        id: axName + "_merged_" + Date.now().toString(36)
+                        id: `${axName}_merged_${startNode}_${endNode}`
                     });
                 }
             });

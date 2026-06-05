@@ -13,9 +13,10 @@ export function generateFoundationReactionSvg(fd, unifiedBbox = null) {
   const bbox = unifiedBbox || getFloorBoundingBox(fd);
   const minX = bbox.minX, maxX = bbox.maxX, minY = bbox.minY, maxY = bbox.maxY;
   
-  const padding = 100;
-  const svgW = 600;
-  const scale = Math.min((svgW - padding * 2) / (bbox.width || 1), 600 / (bbox.height || 1));
+  const isWide = bbox.width > 12000;
+  const svgW = isWide ? 1000 : 600;
+  const padding = isWide ? 150 : 100;
+  const scale = Math.min((svgW - padding * 2) / (bbox.width || 1), svgW / (bbox.height || 1));
   const svgH = bbox.height * scale + padding * 2;
 
   const w2s = (x, y) => {
@@ -27,6 +28,11 @@ export function generateFoundationReactionSvg(fd, unifiedBbox = null) {
   let svg = `<svg width="100%" viewBox="0 0 ${svgW} ${svgH}" xmlns="http://www.w3.org/2000/svg" style="background:#fff; font-family: sans-serif; border: 1px solid #ddd; max-height: 1000px; width: 100%; max-width: 1600px; margin: 0 auto; display: block;">`;
 
   svg += appendAxesBackground(w2s, bbox, svgW, svgH);
+
+  const sigmaFontSize = isWide ? 14 : 16;
+  const idFontSize = isWide ? 11 : 13;
+  const beamFontSize = isWide ? 8 : 10;
+  const textOffset = isWide ? 14 : 18;
 
   (fd.slabs || []).forEach(slab => {
       if (!slab.nodeIds || slab.nodeIds.length < 3) return;
@@ -45,8 +51,8 @@ export function generateFoundationReactionSvg(fd, unifiedBbox = null) {
       
       svg += `<path d="${d}" fill="rgba(46, 204, 113, 0.1)" stroke="#27ae60" stroke-width="1.5" stroke-dasharray="4,4" />`;
       const sigma = (slab.groundPressure || 0).toFixed(3);
-      svg += `<text x="${cx}" y="${cy}" font-size="16" fill="#2c3e50" font-weight="bold" text-anchor="middle">σe=${sigma} kN/㎡</text>`;
-      svg += `<text x="${cx}" y="${cy+18}" font-size="13" fill="#7f8c8d" text-anchor="middle">${slab.id}</text>`;
+      svg += `<text x="${cx}" y="${cy}" font-size="${sigmaFontSize}" fill="#2c3e50" font-weight="bold" text-anchor="middle">σe=${sigma} kN/㎡</text>`;
+      svg += `<text x="${cx}" y="${cy + textOffset}" font-size="${idFontSize}" fill="#7f8c8d" text-anchor="middle">${slab.id}</text>`;
   });
 
   const allBeams = [...(fd.beams || []).filter(b => b.type === 'foundation_beam' || !b.type), ...(fd.perimeterBeams || [])];
@@ -61,7 +67,7 @@ export function generateFoundationReactionSvg(fd, unifiedBbox = null) {
       const cx = (p1.x + p2.x) / 2, cy = (p1.y + p2.y) / 2;
       const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
       const rotAngle = (angle > 90 || angle < -90) ? angle + 180 : angle;
-      svg += `<text x="${cx}" y="${cy - 5}" font-size="10" fill="${beamColor}" font-weight="bold" text-anchor="middle" transform="rotate(${rotAngle}, ${cx}, ${cy})">w=${w_val} kN/m</text>`;
+      svg += `<text x="${cx}" y="${cy - 5}" font-size="${beamFontSize}" fill="${beamColor}" font-weight="bold" text-anchor="middle" transform="rotate(${rotAngle}, ${cx}, ${cy})">w=${w_val} kN/m</text>`;
   });
 
   (fd.columns || []).forEach(c => {
@@ -81,11 +87,18 @@ export function generateFoundationTributarySvg(fd, unifiedBbox = null) {
   if (!fd || !fd.nodes || fd.nodes.length === 0) return '';
   const bbox = unifiedBbox || getFloorBoundingBox(fd);
   const minX = bbox.minX, maxX = bbox.maxX, minY = bbox.minY, maxY = bbox.maxY;
-  const padding = 100, svgW = 600, scale = Math.min((svgW - padding * 2) / (bbox.width || 1), 600 / (bbox.height || 1)), svgH = bbox.height * scale + padding * 2;
+  
+  const isWide = bbox.width > 12000;
+  const svgW = isWide ? 1000 : 600;
+  const padding = isWide ? 150 : 100;
+  const scale = Math.min((svgW - padding * 2) / (bbox.width || 1), svgW / (bbox.height || 1));
+  const svgH = bbox.height * scale + padding * 2;
   const w2s = (x, y) => ({ x: padding + (x - minX) * scale, y: svgH - padding - (y - minY) * scale });
 
   let svg = `<svg width="100%" viewBox="0 0 ${svgW} ${svgH}" xmlns="http://www.w3.org/2000/svg" style="background:#fff; font-family: sans-serif; border: 1px solid #ddd; max-height: 1000px; width: 100%; max-width: 1600px; margin: 0 auto; display: block;">`;
   svg += appendAxesBackground(w2s, bbox, svgW, svgH);
+
+  const textFontSize = isWide ? 9 : 11;
 
   (fd.slabs || []).forEach(slab => {
       if (!slab.nodeIds || slab.nodeIds.length < 3) return;
@@ -109,8 +122,8 @@ export function generateFoundationTributarySvg(fd, unifiedBbox = null) {
           const A = (slab.edgeAreas && slab.edgeAreas[idx]) ? slab.edgeAreas[idx] : 0;
           const B = (slab.edgeLs && slab.edgeLs[idx]) ? slab.edgeLs[idx] : 0;
           if (A > 0) {
-              svg += `<text x="${sp.x}" y="${sp.y - 7}" font-size="11" fill="#2980b9" font-weight="bold" text-anchor="middle">A=${A.toFixed(3)}㎡</text>`;
-              svg += `<text x="${sp.x}" y="${sp.y + 7}" font-size="11" fill="#c0392b" font-weight="bold" text-anchor="middle">B=${B.toFixed(3)}m</text>`;
+              svg += `<text x="${sp.x}" y="${sp.y - 7}" font-size="${textFontSize}" fill="#2980b9" font-weight="bold" text-anchor="middle">A=${A.toFixed(3)}㎡</text>`;
+              svg += `<text x="${sp.x}" y="${sp.y + 7}" font-size="${textFontSize}" fill="#c0392b" font-weight="bold" text-anchor="middle">B=${B.toFixed(3)}m</text>`;
           }
       });
   });

@@ -60,7 +60,31 @@ const normalizeAxisName = (name) => (name || "").replace(/通り$/, "").trim();
  * @param {Object} allFloorData - 全階層のデータ
  * @param {string[]} floorList - 階層の並び順 (例: ['PH','R','2F','1F'])
  */
-export const calculateColumnT = function(colIndex, fd, targetFloorKey, allFloorData, floorList = ['PH','R','2F','1F']) {
+export const calculateColumnT = function(colIndex, fd, targetFloorKey, allFloorData, floorList) {
+  if (!targetFloorKey) {
+    targetFloorKey = window.currentFloor || (fd && fd.floor) || '1';
+  }
+  if (!allFloorData) {
+    allFloorData = window.floorData || {};
+  }
+  
+  const hasMismatch = floorList && floorList.some(f => !allFloorData[f]);
+  if (!floorList || floorList.length === 0 || hasMismatch) {
+    floorList = window.FLOORS || Object.keys(allFloorData).filter(k => k !== 'nodes' && k !== 'materials' && k !== 'nextId' && k !== 'settings') || ['PH', 'R', '3', '2', '1'];
+  }
+  
+  if (!floorList.includes(targetFloorKey)) {
+    const cleanKey = targetFloorKey.replace('F', '');
+    if (floorList.includes(cleanKey)) {
+      targetFloorKey = cleanKey;
+    } else {
+      const fKey = targetFloorKey + 'F';
+      if (floorList.includes(fKey)) {
+        targetFloorKey = fKey;
+      }
+    }
+  }
+
   if (!allFloorData || !fd) return { T: 0, metal: '-', ratio: 0, cases: [], criticalCase: { name: '-' } };
   
   const col = fd.columns[colIndex];
