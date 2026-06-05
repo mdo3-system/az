@@ -80,6 +80,29 @@ export function normalizeColumn(c) {
 
 /** 基礎梁の正規化 */
 export function normalizeBeam(b) {
+  const depth = asNum(b.depth, 600);
+  const width = asNum(b.width, 150);
+  const dt = asNum(b.dt, 70);
+
+  let spans = Array.isArray(b.spans) ? b.spans : (Array.isArray(b.spanProps) ? b.spanProps : []);
+  let spanProps = Array.isArray(b.spanProps) ? b.spanProps : (Array.isArray(b.spans) ? b.spans : []);
+
+  // 全体の値（右パネルなどでの変更）を各スパンデータに同期
+  spans.forEach(s => {
+    if (s) {
+      s.D = depth;
+      s.b = width;
+      s.dt = dt;
+    }
+  });
+  spanProps.forEach(s => {
+    if (s) {
+      s.D = depth;
+      s.b = width;
+      s.dt = dt;
+    }
+  });
+
   return {
     id: b.id || '',
     n1: b.n1 !== undefined ? parseInt(b.n1) : -1,
@@ -87,13 +110,13 @@ export function normalizeBeam(b) {
     type: b.type || (b.id && b.id.startsWith('FB') ? 'foundation_beam' : 'beam'),
     axisName: b.axisName || b.axis || '',
     axis: b.axis || b.axisName || '', // 💡 axisプロパティも保持
-    depth: asNum(b.depth, 600),   // 梁成 (mm)
-    width: asNum(b.width, 150),   // 梁幅 (mm)
+    depth: depth,   // 梁成 (mm)
+    width: width,   // 梁幅 (mm)
     topRebar: b.topRebar || '1-D13',
     bottomRebar: b.bottomRebar || '1-D13',
     stirrupRebar: b.stirrupRebar || 'D10',
     stirrupPitch: asNum(b.stirrupPitch, 200),
-    dt: asNum(b.dt, 70),
+    dt: dt,
     anchorM12: asNum(b.anchorM12, 0),
     anchorM16: asNum(b.anchorM16, 0),
     showReport: b.showReport !== false,
@@ -103,8 +126,8 @@ export function normalizeBeam(b) {
     spanLoads: b.spanLoads || [],
     
     // 💡 重要: スパン別詳細データ (spanProps, spans) を消失させないように保持
-    spanProps: Array.isArray(b.spanProps) ? b.spanProps : (Array.isArray(b.spans) ? b.spans : []),
-    spans: Array.isArray(b.spans) ? b.spans : (Array.isArray(b.spanProps) ? b.spanProps : []),
+    spanProps: spanProps,
+    spans: spans,
     
     // 応力データ等の中間計算値もロード・履歴復元用に保持
     stressData: b.stressData || null,

@@ -16,23 +16,26 @@ export function handleNwExcelUpload(event) {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: 'array' });
         
-        // 💡 全角英数字を半角に変換し、不要な記号を除去して大文字化する
+        // 💡 全角英数字を半角に変換し、不要な記号を除去して大文字化する（ゼロ埋めも除去して表記揺れを吸収）
         const normalize = (s) => {
           if (!s) return "";
           let res = String(s).replace(/[！-～]/g, (ss) => String.fromCharCode(ss.charCodeAt(0) - 0xFEE0));
-          return res.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+          res = res.toUpperCase();
+          res = res.replace(/([XY])0+([1-9])/g, '$1$2'); // 例: X01 -> X1, Y09 -> Y9 などのゼロ埋め除去
+          return res.replace(/[^a-zA-Z0-9]/g, '');
         };
 
         const normalized_nw = {};
         
         const normalizeFloor = (f) => {
-          const s = String(f).trim();
-          if (!s) return "";
+          if (!f) return "";
+          // 全角英数字を半角に変換
+          let s = String(f).replace(/[！-～]/g, (ss) => String.fromCharCode(ss.charCodeAt(0) - 0xFEE0)).trim();
           if (s.includes('1')) return '1';
           if (s.includes('2')) return '2';
           if (s.includes('3')) return '3';
-          if (s.includes('R') || s.includes('屋') || s.includes('小屋')) return 'R';
-          if (s.includes('PH')) return 'PH';
+          if (s.toUpperCase().includes('R') || s.includes('屋') || s.includes('小屋')) return 'R';
+          if (s.toUpperCase().includes('PH')) return 'PH';
           return s;
         };
         const targetFloor = normalizeFloor(currentFloor);

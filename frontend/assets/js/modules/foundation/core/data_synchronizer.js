@@ -49,6 +49,13 @@ export const syncSlabDataToBeams = function(overrideFd = null) {
         const t = Math.max(0, Math.min(1, getTOnBeam(p, n1, n2)));
         return Math.hypot(p.x - (n1.x + t*dx), p.y - (n1.y + t*dy));
     };
+    const distToInfiniteLine = (p, n1, n2) => {
+        const dx = n2.x - n1.x, dy = n2.y - n1.y;
+        const L2 = dx*dx + dy*dy;
+        if (L2 < 1) return Math.hypot(p.x - n1.x, p.y - n1.y);
+        const t = getTOnBeam(p, n1, n2);
+        return Math.hypot(p.x - (n1.x + t*dx), p.y - (n1.y + t*dy));
+    };
 
     // 3. スラブ辺と梁の対応付け
     const beamMapping = new Map();
@@ -77,8 +84,8 @@ export const syncSlabDataToBeams = function(overrideFd = null) {
                 const bn2 = fd.nodes[b.n2];
                 if (!bn1 || !bn2) return;
 
-                const d1 = distToLine(p1, bn1, bn2);
-                const d2 = distToLine(p2, bn1, bn2);
+                const d1 = distToInfiniteLine(p1, bn1, bn2);
+                const d2 = distToInfiniteLine(p2, bn1, bn2);
 
                 if (d1 < 15 && d2 < 15) {
                     const t1 = getTOnBeam(p1, bn1, bn2);

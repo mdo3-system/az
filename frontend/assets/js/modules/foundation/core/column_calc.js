@@ -215,10 +215,21 @@ export const calculateColumnT = function(colIndex, fd, targetFloorKey, allFloorD
   const getMetalInfo = function(mode, mId, mCap, mName, aMetal) {
     if (mode === 'manual') {
       const master = HARDWARE_MASTER.find(function(m) { return m.id === mId; });
-      return { 
-        name: mName || (master ? master.name : (mId === 'custom' ? '任意金物' : '未定義')), 
-        cap: parseFloat(mCap) || 0, isManual: true 
-      };
+      if (mId === 'custom') {
+        return { 
+          name: mName || '任意金物', 
+          cap: parseFloat(mCap) || 0, 
+          isManual: true 
+        };
+      } else if (master) {
+        return {
+          name: master.name,
+          cap: master.cap,
+          isManual: true
+        };
+      } else {
+        return { name: '未定義', cap: 0, isManual: true };
+      }
     }
     return { name: aMetal.name, cap: aMetal.cap, isManual: false };
   };
