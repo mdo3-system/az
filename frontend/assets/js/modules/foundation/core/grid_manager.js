@@ -58,7 +58,7 @@ function updateIndicesAfterNodeRemoval(floorKey, removedIndex) {
 /**
  * 現在の通り芯設定に基づいてノードID（通り芯名）を再生成する
  */
-export function rebuildNodeIds() {
+export function rebuildNodeIds(force = false) {
   const TOL = 100; // 💡 20から100に拡大（微小な座標のずれを許容）
   FLOORS.forEach(f => {
     if (!floorData[f] || !floorData[f].nodes) return;
@@ -72,13 +72,13 @@ export function rebuildNodeIds() {
 
       if (bestVa && bestHa) {
         const newId = (bestVa.label || "?") + (bestHa.label || "?");
-        // 💡 すでに有効な名前がある場合は上書きしない（自動生成名や"?"を含む場合のみ更新）
-        if (!n.id || n.id.startsWith('N_') || n.id.includes('?')) {
+        // 💡 すでに有効な名前がある場合は上書きしない（自動生成名や"?"を含む場合のみ更新、force=trueの時は強制上書き）
+        if (force || !n.id || n.id.startsWith('N_') || n.id.includes('?')) {
           n.id = newId;
         }
       } else {
         // もし軸が見つからない場合は座標から生成
-        if (!n.id || n.id.includes('?')) {
+        if (force || !n.id || n.id.includes('?')) {
           n.id = `N_${Math.round(n.x)}_${Math.round(n.y)}`;
         }
       }
@@ -202,7 +202,7 @@ export function getAffectedElementsCount(dir, idx) {
  * @param {boolean} force - 強制的に上書きするかどうか
  */
 export function syncAllElementSymbols(force = false) {
-  rebuildNodeIds();
+  rebuildNodeIds(force);
   const TOL_COORD = 20; // 座標一致の許容誤差
 
   FLOORS.forEach(f => {
@@ -215,8 +215,8 @@ export function syncAllElementSymbols(force = false) {
         const node = fd.nodes[c.nodeIndex];
         if (node && node.id) {
           const newId = node.id.replace(/_[0-9]+$/, "");
-          // 強制更新でない場合、既存のIDが新しいIDを含んでいればスキップ
-          if (!force && c.id && c.id.startsWith(newId)) return;
+          // 強制更新でない場合、すでに何らかの符号が存在していれば手動修正を保護するためスキップ
+          if (!force && c.id) return;
           c.id = newId;
         }
       });
