@@ -73,6 +73,10 @@ export const openWallAxialModal = function() {
         <select id="axialAxisSelect" onchange="window.renderAxialElevation()" style="padding:4px 8px; background:var(--bg-input); color:#fff; border:1px solid var(--border); border-radius:4px;">
           ${axisList.map(a => `<option value="${a}">${a}</option>`).join('')}
         </select>
+        <label style="font-size:12px; display:flex; align-items:center; gap:4px; cursor:pointer;">
+          <input type="checkbox" id="axialExcludeCheckbox" onchange="window.toggleAxialAxisExclude(this.checked)" style="cursor:pointer;">
+          計算書に出力しない
+        </label>
         <button onclick="window.safeRemoveById('wallAxialModal')" style="background:none; border:none; color:#fff; font-size:24px; cursor:pointer; margin-left:15px;">&times;</button>
       </div>
     </div>
@@ -153,6 +157,15 @@ export const renderAxialElevation = function() {
   const axialAxisSelect = document.getElementById('axialAxisSelect');
   if (!axialAxisSelect) return;
   const axisName = axialAxisSelect.value;
+  
+  // 💡 チェックボックスの状態を同期
+  const fd1 = (window.floorData && window.floorData['1']) || floorData['1'];
+  const isExcluded = fd1 && fd1.axialExcludedAxes && fd1.axialExcludedAxes[axisName];
+  const chk = document.getElementById('axialExcludeCheckbox');
+  if (chk) {
+    chk.checked = !!isExcluded;
+  }
+
   const floors = ['PH', 'R', '3', '2', '1'];
   
   const refLine = getAxisReferenceLine(axisName);
@@ -535,3 +548,19 @@ window.openWallAxialModal = openWallAxialModal;
 window.renderAxialElevation = renderAxialElevation;
 window.drawAxialElevationOnCanvas = drawAxialElevationOnCanvas;
 window.showAxialStressTable = showAxialStressTable;
+
+export const toggleAxialAxisExclude = (checked) => {
+  const axialAxisSelect = document.getElementById('axialAxisSelect');
+  if (!axialAxisSelect) return;
+  const axisName = axialAxisSelect.value;
+  
+  const fd1 = (window.floorData && window.floorData['1']) || floorData['1'];
+  if (!fd1) return;
+  if (!fd1.axialExcludedAxes) fd1.axialExcludedAxes = {};
+  
+  fd1.axialExcludedAxes[axisName] = checked;
+  
+  if (typeof window.pushHistory === 'function') window.pushHistory();
+  else if (typeof pushHistory === 'function') pushHistory();
+};
+window.toggleAxialAxisExclude = toggleAxialAxisExclude;

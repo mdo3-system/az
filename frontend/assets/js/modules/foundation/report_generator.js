@@ -127,10 +127,36 @@ export const showCalculationReport = function() {
   // 1. 斜め壁の換算倍率算定詳細 (第1章用集計)
   const allFloorData = window.floorData || floorData || {};
   const chap1Html = window.generateDiagonalWallSummaryHtml ? window.generateDiagonalWallSummaryHtml(allFloorData) : '';
-  // 2. 水平構面等価面積算定 (第2章用)
-  const chap2Html = window.generateDiaphragmSummaryHtml ? window.generateDiaphragmSummaryHtml(allFloorData) : '';
-  // 3. 水平構面検定 (斜め軸回転モデル含む) (第3章用)
-  const chap3Html = window.generateDiaphragmCheckReportHtml ? window.generateDiaphragmCheckReportHtml(allFloorData) : '';
+
+  // ─── 水平構面データの有無確認 ───
+  let hasDiaphragmData = false;
+  Object.values(allFloorData).forEach(fd => {
+    if (fd && fd.diaphragms && fd.diaphragms.length > 0) {
+      hasDiaphragmData = true;
+    }
+  });
+
+  let chap2Html = '';
+  let chap3Html = '';
+  if (hasDiaphragmData) {
+    // 2. 水平構面等価面積算定 (第2章用)
+    chap2Html = window.generateDiaphragmSummaryHtml ? window.generateDiaphragmSummaryHtml(allFloorData) : '';
+    // 3. 水平構面検定 (斜め軸回転モデル含む) (第3章用)
+    chap3Html = window.generateDiaphragmCheckReportHtml ? window.generateDiaphragmCheckReportHtml(allFloorData) : '';
+  } else {
+    // データがない場合の表示
+    chap2Html = `
+      <div id="chapter2" class="chapter-section" style="page-break-before: always; page-break-inside: avoid;">
+        <h2 style="font-size: 18px; border-left: 8px solid #e67e22; padding-left: 15px; border-bottom: 2px solid #333; padding-bottom: 5px; margin-bottom: 20px; color: #000;">
+          2. 水平構面検定
+        </h2>
+        <div style="font-size: 16px; font-weight: bold; color: #000; padding: 25px; border: 2px solid #000; background: #fafafa; text-align: center; border-radius: 6px; font-family: 'MS Gothic', sans-serif; margin-bottom: 40px;">
+          ARCHITREND ZERO計算書にて検定
+        </div>
+      </div>
+    `;
+    chap3Html = '';
+  }
 
   if (typeof window.syncSlabDataToBeams === 'function') {
     // 💡 BUGFIX: 閲覧中の階に関わらず、基礎(1F)のデータを確実に同期させる
@@ -316,28 +342,35 @@ export const showCalculationReport = function() {
  */
 export function getAxesToReport() {
   const reportAxes = new Set();
+  const fd1 = (window.floorData && window.floorData['1']) || floorData['1'];
+  const excluded = (fd1 && fd1.axialExcludedAxes) || {};
+
   Object.values(floorData).forEach(fd => {
     (fd.walls || []).forEach(w => {
-      if (w.axisName && w.showReport) reportAxes.add(w.axisName);
+      if (w.axisName && w.showReport && !excluded[w.axisName]) reportAxes.add(w.axisName);
     });
     (fd.columns || []).forEach(c => {
       if (c.showReport) {
         const associatedWalls = (fd.walls || []).filter(w => (w.n1 === c.nodeIndex || w.n2 === c.nodeIndex) && w.axisName);
-        associatedWalls.forEach(w => reportAxes.add(w.axisName));
+        associatedWalls.forEach(w => {
+          if (!excluded[w.axisName]) reportAxes.add(w.axisName);
+        });
       }
     });
     (fd.beams || []).forEach(b => {
-      if ((b.axisName || b.axis) && b.showReport) reportAxes.add(b.axisName || b.axis);
+      const bAxis = b.axisName || b.axis;
+      if (bAxis && b.showReport && !excluded[bAxis]) reportAxes.add(bAxis);
     });
     (fd.perimeterBeams || []).forEach(pb => {
-      if ((pb.axisName || pb.axis) && pb.showReport) reportAxes.add(pb.axisName || pb.axis);
+      const pbAxis = pb.axisName || pb.axis;
+      if (pbAxis && pb.showReport && !excluded[pbAxis]) reportAxes.add(pbAxis);
     });
   });
 
   // 手動で定義された斜め通り芯を明示的に追加 (window経由もチェック)
   const skewedAxes = window.dxfSkewedAxes || dxfSkewedAxes || [];
   skewedAxes.forEach(ax => {
-    if (ax.label) reportAxes.add(ax.label);
+    if (ax.label && !excluded[ax.label]) reportAxes.add(ax.label);
   });
 
   const getPriority = (name) => {

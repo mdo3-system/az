@@ -4,7 +4,7 @@ import { handleMultiPropChange } from '../state_manager.js';
  * 複数選択時のパネル
  */
 export const buildMultiSelectPanel = (elements) => {
-    const types = [...new Set(elements.map(e => e.type))];
+    const types = [...new Set(elements.map(e => (e.type === 'perimeterBeam' || e.type === 'perimeterbeam') ? 'beam' : e.type))];
     if (types.length > 1) {
       return `<div style="color:var(--warn); font-size:12px; padding:15px; text-align:center;">
         <strong>${elements.length}個</strong>の異なる種類の要素を選択中<br>
