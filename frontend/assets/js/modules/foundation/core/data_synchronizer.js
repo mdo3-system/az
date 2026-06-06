@@ -68,8 +68,32 @@ export const syncSlabDataToBeams = function(overrideFd = null) {
             const p2 = fd.nodes[nids[(i + 1) % nids.length]];
             if (!p1 || !p2) continue;
 
-            const edgeB = slab.edgeLs[i] || 0;
-            const edgeSigma = slab.groundPressure || 20.0;
+            let edgeB = slab.edgeLs[i] || 0;
+            let edgeSigma = (slab.groundPressure !== undefined && slab.groundPressure !== null && slab.groundPressure !== "") 
+                ? parseFloat(slab.groundPressure) 
+                : 30.0;
+            if (isNaN(edgeSigma) || edgeSigma <= 0) edgeSigma = 30.0;
+
+            // 💡 凹多角形（変形スラブ）などで半平面交差による負担面積計算が破綻した場合の救済措置
+            if (edgeB < 0.05) {
+                let lx = 2.0;
+                if (slab.aijData && slab.aijData.lx) {
+                    lx = slab.aijData.lx;
+                } else if (slab.nodeIds && slab.nodeIds.length >= 3) {
+                    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+                    slab.nodeIds.forEach(nid => {
+                        const p = fd.nodes[nid];
+                        if (p) {
+                            if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+                            if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
+                        }
+                    });
+                    const W = (maxX - minX) / 1000, H = (maxY - minY) / 1000;
+                    if (W > 0 && H > 0) lx = Math.min(W, H);
+                }
+                edgeB = lx / 2;
+            }
+
             if (edgeB <= 0) continue;
 
             let centerX = 0, centerY = 0;

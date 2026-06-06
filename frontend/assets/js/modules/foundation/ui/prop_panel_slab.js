@@ -17,7 +17,7 @@ export const buildSlabPanel = (el, fd) => {
     const sP = slab.shortPitch || 200; 
     const lR = slab.longRebar || 'D13'; 
     const lP = slab.longPitch || 200; 
-    const groundPressure = slab.groundPressure !== undefined ? slab.groundPressure : 30.0;
+    const groundPressure = (slab.groundPressure !== undefined && slab.groundPressure !== null && parseFloat(slab.groundPressure) > 0) ? parseFloat(slab.groundPressure) : 30.0;
     const rebarList = ['D10', 'D13', 'D16', 'D10+D13', 'D13+D16'];
 
     let html = `

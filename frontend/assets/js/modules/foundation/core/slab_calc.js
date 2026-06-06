@@ -164,8 +164,9 @@ export const calculateSlabStress = function(slab, nodes) {
 
     let sigma_e = 30.0;
     if (slab && slab.groundPressure !== undefined && slab.groundPressure !== null) {
-        sigma_e = parseFloat(slab.groundPressure);
-        if (isNaN(sigma_e)) sigma_e = 30.0;
+        const parsed = parseFloat(slab.groundPressure);
+        if (!isNaN(parsed) && parsed > 0) sigma_e = parsed;
+        // parsed=0 の場合はデフォルト30.0を保持
     }
 
     const D = slab ? (slab.thickness || slab.D || slab.t || 150) : 150;

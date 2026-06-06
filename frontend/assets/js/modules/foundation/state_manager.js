@@ -70,6 +70,24 @@ export const handlePropChange = (type, arg2, arg3, arg4) => {
                 });
             }
         }
+
+        // 💡 基礎梁の span プロパティも同期する（モーダルとの不整合修正）
+        if (['beam', 'perimeterBeam', 'perimeterbeam'].includes(type) && targetObj.spans) {
+            targetObj.spans.forEach(span => {
+                if (prop === 'width') span.b = parseFloat(value) || span.b;
+                if (prop === 'depth') span.D = parseFloat(value) || span.D;
+                if (prop === 'dt') span.dt = parseFloat(value) || span.dt;
+                if (prop === 'topRebar') span.topRebar = value;
+                if (prop === 'bottomRebar') span.bottomRebar = value;
+                if (prop === 'stirrupRebar') span.stirrup = value;
+                if (prop === 'stirrupPitch') span.pitch = parseFloat(value) || span.pitch;
+            });
+            if (!targetObj.spanProps) targetObj.spanProps = [];
+            targetObj.spans.forEach((span, i) => {
+                if (!targetObj.spanProps[i]) targetObj.spanProps[i] = {};
+                Object.assign(targetObj.spanProps[i], span);
+            });
+        }
     }
 
     // --- データの健全化（正規化）の実行 ---

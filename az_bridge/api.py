@@ -466,3 +466,8 @@ async def root() -> FileResponse:
 
 if _FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(_FRONTEND_DIR)), name="static")
+
+# データディレクトリを配信（foundation_data.json等）
+_DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+if _DATA_DIR.exists():
+    app.mount("/data", StaticFiles(directory=str(_DATA_DIR)), name="data")

@@ -170,7 +170,10 @@ export function normalizeSlab(s) {
     edgeAreas: s.edgeAreas || [],
     edgeLs: s.edgeLs || [],
     edgeIsTriangle: s.edgeIsTriangle || [],
-    groundPressure: asNum(s.groundPressure, 30.0)
+    // 💡 接地圧: 0 は「未設定」として 30.0 kN/m² をデフォルトにする
+    groundPressure: (s.groundPressure !== undefined && s.groundPressure !== null && s.groundPressure !== '' && parseFloat(s.groundPressure) > 0) 
+        ? parseFloat(s.groundPressure) 
+        : 30.0
   };
 }
 

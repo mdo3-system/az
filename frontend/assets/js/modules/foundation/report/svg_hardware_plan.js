@@ -23,7 +23,9 @@ export function generateHardwarePlanSvg(floorKey, fd, unifiedBbox = null) {
       const n = fd.nodes[p.nodeIndex]; if(!n) return;
       const pos = w2s(n.x, n.y);
       let tName = '', bName = '';
-      const res = window.calculateColumnT ? window.calculateColumnT(idx, fd, floorKey) : null;
+      const allFd = window.allFloorData || window.floorData || {};
+      const floors = window.FLOORS || ['PH', 'R', '3', '2', '1'];
+      const res = window.calculateColumnT ? window.calculateColumnT(idx, fd, floorKey, allFd, floors) : null;
       if (res) {
           const isReal = (m) => m && m !== '-' && !m.includes('不要') && !m.includes('対象外') && !m.includes('標準');
           const tm = res.topMetal?.name;

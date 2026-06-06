@@ -72,6 +72,7 @@ window.nextId = nextId;
 
 // 階層データのエイリアス登録
 window.allFloorData = floorData;
+window.FLOORS = FLOORS; // 💡 calculateColumnT等で使用する階順序リストをグローバル登録
 window.rebuildAllColumnIds = rebuildAllColumnIds;
 import { state, defaultProperties } from './foundation_cad.js';
 
