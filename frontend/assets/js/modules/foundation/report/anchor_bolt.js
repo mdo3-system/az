@@ -10,6 +10,12 @@ export const generateAnchorBoltReportHtml = function(fd, anchorBoltMaster, allFl
   let anchorRowsX = "", anchorRowsY = "";
   
   anchorAxes.forEach(axis => {
+    // 💡 BUGFIX: その通り芯上の基礎梁（または外周基礎梁）が全て showReport === false の場合は、アンカーボルト検定から除外する
+    const beamsOnAxis = [...(fd.beams||[]), ...(fd.perimeterBeams||[])].filter(b => (b.axisName || b.axis) === axis);
+    if (beamsOnAxis.length > 0 && beamsOnAxis.every(b => b.showReport === false)) {
+      return;
+    }
+
     const jType = fd.anchorJType || 'J1';
     const am = (anchorBoltMaster || {})[jType] || (anchorBoltMaster || {})['J1'];
     if (!am) return;

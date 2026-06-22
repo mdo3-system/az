@@ -27,14 +27,14 @@ export const calculateWallProps = function(wall, nodes) {
         while (thetaDeg < 0) thetaDeg += 180;
         while (thetaDeg >= 180) thetaDeg -= 180;
 
-        // 10度以内の傾きは水平・垂直にスナップ（斜め通り芯に載っている場合はバイパス）
+        // 1.5度以内の傾きは水平・垂直にスナップ（斜め通り芯に載っている場合はバイパス）
         const skewAxes = window.dxfSkewedAxes || [];
         const normalizedAxis = (wall.axisName || "").replace(/通り$/, "").trim();
         const isSkewed = skewAxes.some(ax => (ax.label || "").replace(/通り$/, "").trim() === normalizedAxis);
 
         if (!isSkewed) {
-          if (thetaDeg < 10 || thetaDeg > 170) thetaDeg = 0;
-          else if (Math.abs(90 - thetaDeg) < 10) thetaDeg = 90;
+          if (thetaDeg < 1.5 || thetaDeg > 178.5) thetaDeg = 0;
+          else if (Math.abs(90 - thetaDeg) < 1.5) thetaDeg = 90;
         }
 
         wall.angle = thetaDeg; 
@@ -183,11 +183,22 @@ export const calculateColumnT = function(colIndex, fd, targetFloorKey, allFloorD
         if (!fData) continue;
 
         // 同一座標にある他階の柱を取得
-        const cIdx = fData.columns.findIndex(c => {
-          const n = fData.nodes[c.nodeIndex];
-          return n && isSamePoint(n, targetNode, TOLERANCES.STRUCTURAL_CONN);
-        });
-        const fCol = cIdx !== -1 ? fData.columns[cIdx] : null;
+        let fCol = null;
+        if (isCurrentFloor) {
+          fCol = col;
+        } else {
+          // 符号が同じ柱を最優先で検索
+          if (col.id) {
+            fCol = fData.columns.find(c => c.id === col.id);
+          }
+          // 符号で見つからない場合は座標で検索 (許容値50mm)
+          if (!fCol) {
+            fCol = fData.columns.find(c => {
+              const n = fData.nodes[c.nodeIndex];
+              return n && isSamePoint(n, targetNode, 50);
+            });
+          }
+        }
         const biObj = getBi(fCol);
         const currentB = parseFloat(fCol?.inflectionRatio || 0.5);
 
