@@ -100,4 +100,4 @@ window.calculateFoundationHorizontalStressData = ColumnCalc.calculateFoundationH
 window.calcSkewedDiaphragmModel = DiaphSkew.calcSkewedDiaphragmModel;
 window.rotatePoint = DiaphSkew.rotatePoint;
 
-console.log("[GlobalBridge] Legacy window object bindings completed (v3.2.2 Optimized).");
+console.log("[GlobalBridge] Legacy window object bindings completed (v3.2.3 Optimized).");

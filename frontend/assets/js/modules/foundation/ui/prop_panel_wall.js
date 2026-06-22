@@ -13,6 +13,9 @@ export const buildWallPanel = (el, fd) => {
   const wMult = w.multiplier !== undefined ? w.multiplier : 1.0;
   const wIsVirtual = wMult === 0;
 
+  const node1Label = n1 ? `${n1.id} (X: ${Math.round(n1.x)}, Y: ${Math.round(n1.y)})` : '未定義';
+  const node2Label = n2 ? `${n2.id} (X: ${Math.round(n2.x)}, Y: ${Math.round(n2.y)})` : '未定義';
+
   return `
     <div style="padding:4px; border-radius:4px; border:1px solid rgba(255,255,255,0.05);">
       <div style="margin-bottom:12px; font-size:12px; display:flex; align-items:center; gap:8px;">
@@ -20,6 +23,13 @@ export const buildWallPanel = (el, fd) => {
           ? `<span style="background:rgba(180,100,255,0.2); color:#cc88ff; padding:2px 6px; border-radius:3px; font-weight:bold;">仮想壁 (通り線)</span>`
           : `<span style="background:rgba(255,0,255,0.15); color:#ff66ff; padding:2px 6px; border-radius:3px; font-weight:bold;">耐力壁</span>`}
         <span style="color:var(--text-muted); font-family:var(--mono);">L=${autoL}</span>
+      </div>
+
+      <!-- 📍 取付位置情報 (グリッド交点 & 座標) -->
+      <div style="margin-bottom:12px; padding:8px; background:rgba(255,255,255,0.02); border-radius:6px; border:1px solid rgba(255,255,255,0.08); font-size:11px; color:#ddd; line-height:1.6;">
+        <div style="font-weight:bold; color:var(--accent); font-size:10px; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">取付位置 (グリッド交点)</div>
+        <div>始点: <span style="font-family:var(--mono); color:#fff;">${node1Label}</span></div>
+        <div>終点: <span style="font-family:var(--mono); color:#fff;">${node2Label}</span></div>
       </div>
 
       <div class="prop-group" style="margin-bottom:10px;">

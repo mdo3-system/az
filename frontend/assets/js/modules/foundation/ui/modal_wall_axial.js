@@ -5,6 +5,7 @@ import { getAxisReferenceLine, getProjectedPos } from '../rendering/projection_u
 import { handlePropChange } from '../state_manager.js';
 import { render as callRender } from '../rendering/view_manager.js';
 import { undo, redo } from '../core/history_manager.js';
+import { calculateAxialForcesForAxis } from '../core/axial_force_calculator.js';
 
 export const openWallAxialModal = function() {
   const allAxes = new Set();
@@ -166,72 +167,13 @@ export const renderAxialElevation = function() {
     chk.checked = !!isExcluded;
   }
 
-  const floors = ['PH', 'R', '3', '2', '1'];
+  const floors = window.FLOORS || ['PH', 'R', '3', '2', '1'];
   
-  const refLine = getAxisReferenceLine(axisName);
-  if (!refLine) return;
+  // 💡 共通のつり合い・累積軸力計算エンジンを呼び出す
+  const calcResult = calculateAxialForcesForAxis(axisName, window.floorData || floorData, floors);
+  if (!calcResult) return;
 
-  const floorDataMap = [];
-  
-  let maxRelIdx = 4;
-  floors.forEach((f, idx) => {
-    // 💡 修正: staleなデータ（allFloorData等）を避け、確実に最新のfloorDataを参照する
-    const fd = (window.floorData && window.floorData[f]) || floorData[f];
-    if (fd && (fd.walls || []).length > 0) {
-      if (idx < maxRelIdx) maxRelIdx = idx;
-    }
-  });
-
-  floors.forEach((floor, idx) => {
-    const fd = (window.floorData && window.floorData[floor]) || floorData[floor];
-    if (!fd) return;
-
-    const wallsOnAxis = (fd.walls || []).filter(w => {
-      if (!w.axisName || w.axisName.trim() !== axisName.trim()) return false;
-      const n1 = fd.nodes[w.n1], n2 = fd.nodes[w.n2];
-      if (!n1 || !n2) return false;
-      const o1 = getProjectedPos(n1, refLine).offset;
-      const o2 = getProjectedPos(n2, refLine).offset;
-      return Math.abs(o1) < 10 && Math.abs(o2) < 10; // 💡 100mmから10mmに厳格化
-    });
-    
-    const columnsOnAxis = (fd.columns || []).filter(c => {
-      const n = fd.nodes[c.nodeIndex];
-      if (!n) return false;
-      const offset = getProjectedPos(n, refLine).offset;
-      return Math.abs(offset) < 10; // 💡 100mmから10mmに厳格化
-    });
-
-    if (wallsOnAxis.length === 0 && columnsOnAxis.length === 0) {
-      if (idx >= maxRelIdx) {
-        floorDataMap.push({ floor, walls: [], columns: [], fd });
-      }
-      return;
-    }
-    floorDataMap.push({ floor, walls: wallsOnAxis, columns: columnsOnAxis, fd });
-  });
-
-  if (floorDataMap.length === 0) return;
-  
-  const getPos = (n) => getProjectedPos(n, refLine).L;
-  let rawPValues = [];
-  floorDataMap.forEach(fm => {
-    fm.walls.forEach(w => {
-      if (fm.fd.nodes[w.n1]) rawPValues.push(getPos(fm.fd.nodes[w.n1]));
-      if (fm.fd.nodes[w.n2]) rawPValues.push(getPos(fm.fd.nodes[w.n2]));
-    });
-    fm.columns.forEach(c => {
-      if (fm.fd.nodes[c.nodeIndex]) rawPValues.push(getPos(fm.fd.nodes[c.nodeIndex]));
-    });
-  });
-
-  // 💡 近接する節点をクラスタリング (1P = 910mm 以内の合算要望に対応)
-  // ただし図面上の表現としては、あまりに離れたものを合算すると不自然なため、150mm程度の遊びを持たせて集約する
-  const pValues = [];
-  rawPValues.sort((a, b) => a - b).forEach(v => {
-    const existing = pValues.find(ex => Math.abs(ex - v) < 150);
-    if (existing === undefined) pValues.push(v);
-  });
+  const { pValues, forceMap, refLine, floorDataMap } = calcResult;
 
   let startPos = 0, totalLength = 1000;
   if (pValues.length >= 2) {
@@ -245,52 +187,20 @@ export const renderAxialElevation = function() {
 
   const isXHorizontal = Math.abs(Math.cos(refLine.angle)) > 0.5;
 
-  const forceMap = {};
-  floors.forEach(f => forceMap[f] = {});
   const tableDataL = [];
   const tableDataR = [];
 
+  const getPos = (n) => getProjectedPos(n, refLine).L;
+
   floorDataMap.forEach((fm, idx) => {
     const f = fm.floor;
-    const prevFloorData = floorDataMap[idx - 1];
     
-    if (prevFloorData && forceMap[prevFloorData.floor]) {
-      Object.entries(forceMap[prevFloorData.floor]).forEach(([pos, forces]) => {
-        const d = parseFloat(pos);
-        const currentNodes = Array.from(new Set(fm.walls.flatMap(w => [getPos(fm.fd.nodes[w.n1]), getPos(fm.fd.nodes[w.n2])]))).sort((a,b)=>a-b);
-        if (currentNodes.length > 0) {
-          let leftIdx = -1;
-          for(let i=0; i<currentNodes.length; i++) {
-            if (currentNodes[i] <= d) leftIdx = i;
-          }
-          if (leftIdx === -1) {
-            const p = currentNodes[0];
-            forceMap[f][p] = forceMap[f][p] || { L:0, R:0 };
-            forceMap[f][p].L += forces.L; forceMap[f][p].R += forces.R;
-          } else if (leftIdx === currentNodes.length - 1) {
-            const p = currentNodes[currentNodes.length -1];
-            forceMap[f][p] = forceMap[f][p] || { L:0, R:0 };
-            forceMap[f][p].L += forces.L; forceMap[f][p].R += forces.R;
-          } else {
-            const d1 = currentNodes[leftIdx], d2 = currentNodes[leftIdx+1];
-            const ratio2 = (d - d1) / (d2 - d1);
-            const ratio1 = 1 - ratio2;
-            forceMap[f][d1] = forceMap[f][d1] || { L:0, R:0 };
-            forceMap[f][d2] = forceMap[f][d2] || { L:0, R:0 };
-            forceMap[f][d1].L += forces.L * ratio1; forceMap[f][d1].R += forces.R * ratio1;
-            forceMap[f][d2].L += forces.L * ratio2; forceMap[f][d2].R += forces.R * ratio2;
-          }
-        }
-      });
-    }
-
-    // 💡 1. 壁の応力計算と図面用データ(forceMap)の更新
+    // 当該階の壁に対して、描画用・算定表用のP, N, Mプロパティを設定
     fm.walls.forEach(w => {
       const n1 = fm.fd.nodes[w.n1], n2 = fm.fd.nodes[w.n2];
       const p1 = getPos(n1), p2 = getPos(n2);
       const L_geo = Math.abs(p2 - p1);
       
-      // 💡 設計長Lの取得（上書き優先）
       const L_mm = parseFloat(w.lengthOverride) || L_geo;
       const L = L_mm / 1000;
       if (L < 0.01) return;
@@ -301,23 +211,15 @@ export const renderAxialElevation = function() {
       const H_mm = parseFloat(w.heightOverride) || parseFloat(fm.fd.floorHeight) || 2730;
       const H = H_mm / 1000;
 
-      // 💡 資料通りの計算 N = P * H / L
       const N_kN = P_kN * H / L; 
       const M_kN_m = P_kN * H;
 
-      const leftP = Math.min(p1, p2), rightP = Math.max(p1, p2);
-      forceMap[f][leftP] = forceMap[f][leftP] || { L:0, R:0 };
-      forceMap[f][rightP] = forceMap[f][rightP] || { L:0, R:0 };
-      
-      forceMap[f][leftP].L += N_kN; forceMap[f][rightP].L -= N_kN;
-      forceMap[f][leftP].R -= N_kN; forceMap[f][rightP].R += N_kN;
-      
       w._calc_P_N = Math.round(P_kN * 1000);
       w._calc_N_N = Math.round(N_kN * 1000);
       w._calc_M_N = Math.round(M_kN_m * 1000);
     });
 
-    // 💡 2. 各通り（交点）ごとの集計（算定表用）
+    // 各通り（交点）ごとの集計（算定表用）
     const nodeMap = new Map();
     const getCrossing = (node) => {
       if (!node) return "";
@@ -352,7 +254,6 @@ export const renderAxialElevation = function() {
       const alpha = val.walls[0]?.multiplier || '-';
       
       const getStress = (mode) => {
-        // 💡 1. 当該階のみの付加軸力 (P*H/L)
         let localN = 0, localP = 0, localM = 0;
         val.walls.forEach(w => {
           localP += (w._calc_P_N || 0);
@@ -360,11 +261,9 @@ export const renderAxialElevation = function() {
           localN += (w._calc_N_N || 0);
         });
 
-        // 💡 2. 上階からの伝達を含めた累積付加軸力
         let accumulatedN = (forceMap[f] && forceMap[f][p]) ? (forceMap[f][p][mode] || 0) : 0;
         if (isNaN(accumulatedN)) accumulatedN = 0;
         
-        // 最上階（リストの先頭）ならMは「-」とする
         const isTopFloor = (f === floorDataMap[0].floor);
         const displayM = isTopFloor ? '-' : Math.round(accumulatedN * 1000).toLocaleString();
 

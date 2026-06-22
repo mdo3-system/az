@@ -1,6 +1,9 @@
 // core/column_calc.js
 import { HARDWARE_MASTER, TOLERANCES, isSamePoint } from './constants.js';
 import { findSupportsOnBeam } from './beam_calc.js';
+import { calculateAxialForcesForAxis } from './axial_force_calculator.js';
+import { getAxisReferenceLine, getProjectedPos } from '../rendering/projection_utils.js';
+import { dxfVAxes, dxfHAxes, dxfSkewedAxes } from '../foundation_cad.js';
 
 /**
  * 壁のプロパティを計算する（純粋関数）
@@ -107,134 +110,149 @@ export const calculateColumnT = function(colIndex, fd, targetFloorKey, allFloorD
     return { top: 0.5, bot: 0.5 };
   };
 
+  // 1. 全ての通り芯名リストを抽出
+  const allAxes = new Set();
+  const vAxes = window.dxfVAxes || dxfVAxes || [];
+  const hAxes = window.dxfHAxes || dxfHAxes || [];
+  const skewedAxes = window.dxfSkewedAxes || dxfSkewedAxes || [];
+  vAxes.forEach(a => { if (a.label) allAxes.add(a.label); });
+  hAxes.forEach(a => { if (a.label) allAxes.add(a.label); });
+  skewedAxes.forEach(a => { if (a.label) allAxes.add(a.label); });
+  Object.values(allFloorData).forEach(fData => {
+    (fData.walls || []).forEach(w => { if (w.axisName) allAxes.add(w.axisName); });
+    (fData.beams || []).forEach(b => { if (b.axisName) allAxes.add(b.axisName); });
+  });
+
+  // 2. 柱が載っている通り芯を検出
+  const matchingAxes = [];
+  allAxes.forEach(axisName => {
+    const refLine = getAxisReferenceLine(axisName, allFloorData);
+    if (!refLine) return;
+    const { offset } = getProjectedPos(targetNode, refLine);
+    if (Math.abs(offset) < 15) { // 余裕を見て 15mm
+      matchingAxes.push(axisName);
+    }
+  });
+
   const axisResults = {};
   const targetFloorIdx = floorList.indexOf(targetFloorKey);
 
-  for (let i = 0; i <= targetFloorIdx; i++) {
-    const fKey = floorList[i];
-    const fData = allFloorData[fKey];
-    const isCurrentFloor = (fKey === targetFloorKey);
-    if (!fData || !fData.nodes || !fData.columns) continue;
+  matchingAxes.forEach(axisName => {
+    // 3. 通り芯上の累積軸力を計算
+    const calcResult = calculateAxialForcesForAxis(axisName, allFloorData, floorList);
+    if (!calcResult) return;
 
-    const cIdx = fData.columns.findIndex(function(c) {
-      const n = fData.nodes[c.nodeIndex];
-      return n && isSamePoint(n, targetNode, TOLERANCES.STRUCTURAL_CONN);
-    });
-    if (cIdx === -1) continue;
+    const { pValues, forceMap, refLine } = calcResult;
+    const colL = getProjectedPos(targetNode, refLine).L;
 
-    const fCol = fData.columns[cIdx];
-    const fNodeIdx = fCol.nodeIndex;
-    const Hi = (fCol.heightOverride || fData.floorHeight || 2730) / 1000;
-    
-    const biObj = getBi(fCol);
-    const currentBiTop = biObj.top;
-    const currentBiBot = biObj.bot;
+    // 投影座標 colL に最も近い節点 p を探す (150mm 以内)
+    const p = pValues.find(ex => Math.abs(ex - colL) < 150);
+    if (p === undefined) return; // この通り芯上の節点に柱が位置していない場合は無視
 
-    const allWalls = (fData.walls || []).filter(function(w) { 
-        const nW1 = fData.nodes[w.n1], nW2 = fData.nodes[w.n2];
-        return (w.n1 === fNodeIdx || w.n2 === fNodeIdx) ||
-               (nW1 && isSamePoint(nW1, fData.nodes[fNodeIdx], TOLERANCES.WALL_CONN)) ||
-               (nW2 && isSamePoint(nW2, fData.nodes[fNodeIdx], TOLERANCES.WALL_CONN));
-    });
-
-    const groups = {};
-    allWalls.forEach(function(w) {
-      const normalizedName = normalizeAxisName(w.axisName);
-      if (!groups[normalizedName]) groups[normalizedName] = [];
-      groups[normalizedName].push(w);
-    });
-
-    Object.keys(groups).forEach(function(axisName) {
-      if (!axisResults[axisName]) {
-        axisResults[axisName] = { 
-          axisName: axisName, sum_Qail_Hi: 0, sum_Qair_Hi: 0, 
-          sum_Ni_upper: 0, sum_Td_upper: 0,
-          Ni_top_this: 0, Ni_bot_this: 0, Td_this: 0,
-          Bi_top: currentBiTop, Bi_bot: currentBiBot,
-          sumX: 0, sumY: 0 
-        };
+    // 4. 加力方向（L, R）ごとに、最上階から対象階までの軸力履歴を集計
+    // 各階 f における累積軸力 S_f を取得し、単階増分 D_f を算出する
+    const getIncrements = (mode) => {
+      const increments = {}; // floor -> increment
+      let prevS = 0;
+      for (let i = 0; i <= targetFloorIdx; i++) {
+        const fKey = floorList[i];
+        const S_f = (forceMap[fKey] && forceMap[fKey][p]) ? (forceMap[fKey][p][mode] || 0) : 0;
+        increments[fKey] = S_f - prevS;
+        prevS = S_f;
       }
-      const res = axisResults[axisName];
-      
-      const skewAxes = window.dxfSkewedAxes || [];
-      const normalizedAxis = normalizeAxisName(axisName);
-      const skewedAxis = skewAxes.find(ax => normalizeAxisName(ax.label) === normalizedAxis);
-      const isSkewed = !!skewedAxis;
-      
-      let qailX = 0, qairX = 0;
-      let qailY = 0, qairY = 0;
-      let qailSkew = 0, qairSkew = 0;
-      const nCenter = fData.nodes[fNodeIdx];
-      
-      groups[axisName].forEach(function(w) {
-        const onidx = (w.n1 === fNodeIdx) ? w.n2 : w.n1;
-        const nRemote = fData.nodes[onidx];
-        if (!nRemote || !nCenter) return;
+      return increments;
+    };
 
-        if (isSkewed) {
-          const M = w.multiplier !== undefined ? parseFloat(w.multiplier) : 1.0;
-          const q_hi = 1.96 * M * Hi;
-          res.sumX += M * (w.length_m || 1);
-          
-          const vx = skewedAxis.p2.x - skewedAxis.p1.x;
-          const vy = skewedAxis.p2.y - skewedAxis.p1.y;
-          const wx = nRemote.x - nCenter.x;
-          const wy = nRemote.y - nCenter.y;
-          const dot = vx * wx + vy * wy;
+    const incrementsL = getIncrements('L');
+    const incrementsR = getIncrements('R');
 
-          if (dot > 0.001) {
-            qairSkew += q_hi;
-          } else if (dot < -0.001) {
-            qailSkew += q_hi;
-          }
+    // 5. 各階の Bi_bot, Bi_top, inflectionRatio (B) を用いて、柱頭・柱脚・Tdの引抜力を計算
+    const calculateForMode = (increments, mode) => {
+      let sum_Ni_upper = 0;
+      let sum_Td_upper = 0;
+      let Ni_top_this = 0;
+      let Ni_bot_this = 0;
+      let Td_this = 0;
+      let Bi_top = 0.5;
+      let Bi_bot = 0.5;
+
+      for (let i = 0; i <= targetFloorIdx; i++) {
+        const fKey = floorList[i];
+        const isCurrentFloor = (fKey === targetFloorKey);
+        const fData = allFloorData[fKey];
+        if (!fData) continue;
+
+        // 同一座標にある他階の柱を取得
+        const cIdx = fData.columns.findIndex(c => {
+          const n = fData.nodes[c.nodeIndex];
+          return n && isSamePoint(n, targetNode, TOLERANCES.STRUCTURAL_CONN);
+        });
+        const fCol = cIdx !== -1 ? fData.columns[cIdx] : null;
+        const biObj = getBi(fCol);
+        const currentB = parseFloat(fCol?.inflectionRatio || 0.5);
+
+        const incVal = increments[fKey] || 0;
+
+        if (isCurrentFloor) {
+          Bi_top = biObj.top;
+          Bi_bot = biObj.bot;
+          Ni_top_this = incVal * biObj.top;
+          Ni_bot_this = incVal * biObj.bot;
+          Td_this = incVal * currentB;
         } else {
-          const q_hi_x = 1.96 * (w.multiplier_x || 0) * Hi;
-          const q_hi_y = 1.96 * (w.multiplier_y || 0) * Hi;
-          
-          res.sumX += (w.multiplier_x || 0) * (w.length_m || 1);
-          res.sumY += (w.multiplier_y || 0) * (w.length_m || 1);
-
-          const isRightX = (nRemote.x > nCenter.x + TOLERANCES.CALC_EPSILON);
-          const isLeftX  = (nRemote.x < nCenter.x - TOLERANCES.CALC_EPSILON);
-          const isUpY    = (nRemote.y > nCenter.y + TOLERANCES.CALC_EPSILON);
-          const isDownY  = (nRemote.y < nCenter.y - TOLERANCES.CALC_EPSILON);
-
-          if (isRightX) qairX += q_hi_x; 
-          else if (isLeftX) qailX += q_hi_x;
-
-          if (isUpY) qairY += q_hi_y; 
-          else if (isDownY) qailY += q_hi_y;
+          sum_Ni_upper += incVal * biObj.bot;
+          sum_Td_upper += incVal * currentB;
         }
+      }
+
+      return { Ni_top_this, Ni_bot_this, Td_this, sum_Ni_upper, sum_Td_upper, Bi_top, Bi_bot };
+    };
+
+    const resL = calculateForMode(incrementsL, 'L');
+    const resR = calculateForMode(incrementsR, 'R');
+
+    // qail_Hi, qair_Hi 用の集計
+    // 対象階 targetFloorKey において、柱の左右にある壁倍率 * 1.96 * Hi の合計値
+    let qail_Hi = 0;
+    let qair_Hi = 0;
+    const currentFd = allFloorData[targetFloorKey];
+    if (currentFd) {
+      const Hi = (fd.floorHeight || 2730) / 1000;
+      const wallsOnAxis = (currentFd.walls || []).filter(w => {
+        if (!w.axisName || w.axisName.trim() !== axisName.trim()) return false;
+        const n1 = currentFd.nodes[w.n1], n2 = currentFd.nodes[w.n2];
+        if (!n1 || !n2) return false;
+        const o1 = getProjectedPos(n1, refLine).offset;
+        const o2 = getProjectedPos(n2, refLine).offset;
+        return Math.abs(o1) < 15 && Math.abs(o2) < 15;
       });
 
-      let qail = 0;
-      let qair = 0;
-      if (isSkewed) {
-        qail = qailSkew;
-        qair = qairSkew;
-      } else {
-        const isXDominant = (res.sumX >= res.sumY);
-        qail = isXDominant ? qailX : qailY;
-        qair = isXDominant ? qairX : qairY;
-      }
+      wallsOnAxis.forEach(w => {
+        const n1 = currentFd.nodes[w.n1], n2 = currentFd.nodes[w.n2];
+        const p1 = getProjectedPos(n1, refLine).L;
+        const p2 = getProjectedPos(n2, refLine).L;
+        const maxP = Math.max(p1, p2);
+        const minP = Math.min(p1, p2);
+        const M = w.multiplier || 0;
+        const val = 1.96 * M * Hi;
 
-      const deltaPower = qair - qail;
-      const currentB = parseFloat(fCol.inflectionRatio || 0.5);
+        if (maxP <= colL + 0.1) {
+          qail_Hi += val;
+        } else if (minP >= colL - 0.1) {
+          qair_Hi += val;
+        }
+      });
+    }
 
-      if (isCurrentFloor) {
-        res.Ni_top_this = deltaPower * currentBiTop;
-        res.Ni_bot_this = deltaPower * currentBiBot;
-        res.Td_this = deltaPower * currentB;
-        res.sum_Qail_Hi = qail;
-        res.sum_Qair_Hi = qair;
-        res.Bi_top = currentBiTop;
-        res.Bi_bot = currentBiBot;
-      } else {
-        res.sum_Ni_upper += deltaPower * currentBiBot;
-        res.sum_Td_upper += deltaPower * currentB;
-      }
-    });
-  }
+    axisResults[axisName] = {
+      axisName,
+      resL,
+      resR,
+      qail_Hi,
+      qair_Hi,
+      refLine
+    };
+  });
 
   const nw = parseFloat(col.nw !== undefined ? col.nw : (col.longTermAxial || col.axialLoad || 0)) || 0;
   const reduction = nw;
@@ -274,28 +292,30 @@ export const calculateColumnT = function(colIndex, fd, targetFloorKey, allFloorD
   const cases = [];
   Object.keys(axisResults).forEach(function(axisName) {
     const res = axisResults[axisName];
-    const axisDirection = (res.sumX >= res.sumY) ? 'X' : 'Y';
-    const dirs = [ { name: '左から (→)', sign: 1 }, { name: '右から (←)', sign: -1 } ];
+    // 角度から X/Y 方向を判定
+    const dx = Math.cos(res.refLine.angle);
+    const dy = Math.sin(res.refLine.angle);
+    const axisDirection = (Math.abs(dx) >= Math.abs(dy)) ? 'X' : 'Y';
+
+    const dirs = [ 
+      { name: '左から (→)', mode: 'L', data: res.resL }, 
+      { name: '右から (←)', mode: 'R', data: res.resR } 
+    ];
 
     dirs.forEach(function(d) {
-      const sign = d.sign;
-      const ni_top_this = res.Ni_top_this * sign;
-      const ni_bot_this = res.Ni_bot_this * sign;
+      const calcData = d.data;
       const axisOver = (col.axisOverrides || {})[axisName] || {};
       
-      const manualValue = (sign > 0) 
+      const manualValue = (d.mode === 'L') 
           ? (axisOver.L !== undefined && axisOver.L !== null ? axisOver.L : (col.niUpperOverride_L || null))
           : (axisOver.R !== undefined && axisOver.R !== null ? axisOver.R : (col.niUpperOverride_R || null));
 
       const ni_upper = (manualValue !== null && manualValue !== "" && !isNaN(parseFloat(manualValue))) 
-          ? parseFloat(manualValue) : (res.sum_Ni_upper * sign);
+          ? parseFloat(manualValue) : calcData.sum_Ni_upper;
       
-      const T_top_raw = (ni_top_this + ni_upper) - reduction;
-      const T_bot_raw = (ni_bot_this + ni_upper) - reduction;
-
-      const td_this = res.Td_this * sign;
-      const td_upper = res.sum_Td_upper * sign;
-      const Td_val = td_this + td_upper;
+      const T_top_raw = (calcData.Ni_top_this + ni_upper) - reduction;
+      const T_bot_raw = (calcData.Ni_bot_this + ni_upper) - reduction;
+      const Td_val = calcData.Td_this + calcData.sum_Td_upper;
 
       const topInfo = getMetalInfo(col.top_metalMode, col.top_metalId, col.top_metalCap, col.top_metalName, getAutoMetal(T_top_raw));
       const baseInfo = getMetalInfo(col.base_metalMode, col.base_metalId, col.base_metalCap, col.base_metalName, getAutoMetal(T_bot_raw));
@@ -304,10 +324,10 @@ export const calculateColumnT = function(colIndex, fd, targetFloorKey, allFloorD
         name: axisName + ' ' + d.name,
         axisName: axisName,
         direction: axisDirection, 
-        q1_Hi: res.sum_Qail_Hi, q2_Hi: res.sum_Qair_Hi,
-        Bi_top: res.Bi_top, Bi_bot: res.Bi_bot,
-        Ni_top: ni_top_this, Ni_bot: ni_bot_this, Ni_upper: ni_upper,
-        totalNi_top: ni_top_this + ni_upper, totalNi_bot: ni_bot_this + ni_upper,
+        q1_Hi: res.qail_Hi, q2_Hi: res.qair_Hi,
+        Bi_top: calcData.Bi_top, Bi_bot: calcData.Bi_bot,
+        Ni_top: calcData.Ni_top_this, Ni_bot: calcData.Ni_bot_this, Ni_upper: ni_upper,
+        totalNi_top: calcData.Ni_top_this + ni_upper, totalNi_bot: calcData.Ni_bot_this + ni_upper,
         T_top: T_top_raw, T_bot: T_bot_raw,
         Td: Td_val,
         topMetal: topInfo, baseMetal: baseInfo,

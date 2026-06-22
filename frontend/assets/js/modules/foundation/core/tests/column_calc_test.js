@@ -20,7 +20,8 @@ runner.test('calculateColumnT - Direction Tolerance (1mm buffer)', (t) => {
   const allFloorData = { '1': floorData };
   const res = calculateColumnT(0, floorData, '1', allFloorData, ['1']);
 
-  t.assertEquals(res.cases[0].q2_Hi, 0, '0.5mm shift should not be counted as Right due to 1mm buffer');
+  t.assertEquals(res.cases[0].q1_Hi, 0, 'Left side should be 0 because the wall is on the right');
+  t.assertAlmostEqual(res.cases[0].q2_Hi, 5.3508, 0.0001, '0.5mm shift should be tolerated and wall should be counted as Right');
 });
 
 runner.test('calculateColumnT - Multi-floor Axial Summation', (t) => {

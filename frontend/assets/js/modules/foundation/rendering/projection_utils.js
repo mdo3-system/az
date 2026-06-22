@@ -165,7 +165,7 @@ export function getAxisIntersections(segments) {
 /**
  * 対象通り名を構成する要素から「基準となる代表直線」を算出する（剛体投影用）
  */
-export function getAxisReferenceLine(axisName) {
+export function getAxisReferenceLine(axisName, optAllFloorData) {
   if (!axisName) return null;
   const targetLabel = axisName.trim();
 
@@ -182,7 +182,7 @@ export function getAxisReferenceLine(axisName) {
        angle: isV ? Math.PI/2 : 0,
        dx: isV ? 0 : 1000,
        dy: isV ? 1000 : 0
-    };
+     };
   }
 
   const sList = window.dxfSkewedAxes || dxfSkewedAxes || [];
@@ -201,7 +201,7 @@ export function getAxisReferenceLine(axisName) {
   const rawSegments = [];
   const floors = ['PH', 'R', '3', '2', '1'];
   floors.forEach(f => {
-    const fd = (window.allFloorData && window.allFloorData[f]) || (window.floorData && window.floorData[f]) || floorData[f];
+    const fd = (optAllFloorData && optAllFloorData[f]) || (window.allFloorData && window.allFloorData[f]) || (window.floorData && window.floorData[f]) || floorData[f];
     if (!fd) return;
     [...(fd.walls || []), ...(fd.beams || []), ...(fd.perimeterBeams || [])].forEach(it => {
       if (it.axisName === axisName) {
