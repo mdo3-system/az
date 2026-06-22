@@ -38,6 +38,7 @@ import './core/tests/column_calc_test.js';
 import './core/tests/beam_calc_test.js';
 import './core/tests/slab_calc_test.js';
 import './core/tests/diaphragm_skew_calc_test.js';
+import './core/tests/dxf_import_test.js';
 
 // --- 基盤機能のグローバル登録 ---
 window.AppEventBus = AppEventBus;
@@ -48,7 +49,7 @@ import { initUIListeners } from './core/events/ui_listeners.js';
 initCalculationListeners();
 initUIListeners();
 
-console.log('%c🏗 AZ Structural CAD v3.1.23 Refactoring Phase 1', 'color: #e67e22; font-weight: bold;');
+console.log('%c🏗 AZ Structural CAD v3.2.0 Refactoring Phase 1', 'color: #e67e22; font-weight: bold;');
 console.log('Type %cAppTestRunner.runAll()%c to run unit tests.', 'color: #3498db; font-weight: bold;', 'color: inherit;');
 import { 
   floorData, FLOORS, currentFloor, setFloor, render, 

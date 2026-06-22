@@ -153,7 +153,7 @@ export const setupEventHandlers = function(canvas, state) {
     const btn = document.getElementById('btnMergeFloors');
     const input1f = document.getElementById('dxf-input-1f');
     if (!input1f || !input1f.files[0]) {
-      alert("1F平面図は必須です。");
+      alert('1F平面図は必須です。');
       return;
     }
 
@@ -164,56 +164,53 @@ export const setupEventHandlers = function(canvas, state) {
     });
 
     const originalText = btn.textContent;
-    btn.disabled = true; btn.textContent = "⌛ 統合・解析中...";
+    btn.disabled = true; btn.textContent = '⌛ 統合・解析中...';
 
     try {
-      console.log(`[Step 1] Fetching merged DXF from backend...`);
+      // Step 1: バックエンドで複数階 DXF を統合
+      console.log('[MergeFloors] Step 1: バックエンドで DXF 統合中...');
       const response = await fetch(`${API_BASE_URL}/api/v1/merge-floors`, { method: 'POST', body: formData });
-      if (!response.ok) throw new Error(`結合処理に失敗しました (HTTP ${response.status})`);
+      if (!response.ok) throw new Error(`DXF 統合に失敗しました (HTTP ${response.status})`);
 
       const blob = await response.blob();
-      const file = new File([blob], `merged_structural_${Date.now()}.dxf`, { type: "application/dxf" });
-      
-      const { parseDxfFile } = await import('../foundation_dxf.js');
+      const mergedFile = new File([blob], `merged_structural_${Date.now()}.dxf`, { type: 'application/dxf' });
 
-      console.log(`[Step 2] Parsing merged DXF...`);
-      parseDxfFile(file, false, (err) => {
-          if (err) {
-              console.error("Parse error:", err);
-              alert("統合DXFの解析中にエラーが発生しました。");
-          } else {
-              console.log("[Step 3] Success!");
-              updateUnderlayCheckboxes();
-              updateLayerCheckboxes();
-              window.updatePropertyPanel?.();
-              window.updateDataList?.();
-              window.fitAll?.();
-              
-              // 全データの正規化と符号再生成
-              import('../data/data_normalizer.js').then(({ normalizeAllFloors }) => {
-                  normalizeAllFloors(floorData);
-                  if (typeof window.rebuildAllColumnIds === 'function') window.rebuildAllColumnIds();
-                  pushHistory();
-                  callRender();
-              });
-          }
-          btn.disabled = false; btn.textContent = originalText;
-      });
+      // Step 2: DXF パース → 正規化 → ID再構築まで DxfImportService で完結
+      console.log('[MergeFloors] Step 2: DXF 解析・正規化中 (DxfImportService)...');
+      const { DxfImportService } = await import('../core/services/dxf_import_service.js');
+      const dxfImportService = new DxfImportService();
+      await dxfImportService.importMergedFloors(mergedFile);
+
+      // Step 3: UI 更新（正規化完了後なので正確なデータで描画される）
+      console.log('[MergeFloors] Step 3: UI 更新中...');
+      updateUnderlayCheckboxes();
+      updateLayerCheckboxes();
+      window.updatePropertyPanel?.();
+      window.updateDataList?.();
+      window.fitAll?.();
+      callRender();
+      console.log('[MergeFloors] 完了 ✅');
 
     } catch (err) {
-      console.error(err);
-      alert(err.message);
+      console.error('[MergeFloors] エラー:', err);
+      alert(err.message || 'DXF 読み込み中にエラーが発生しました。');
+    } finally {
       btn.disabled = false; btn.textContent = originalText;
     }
   });
 
+
   // --- JSON Save / Load ---
-  document.getElementById('btn-save-json')?.addEventListener('click', (e) => {
+  document.getElementById('btn-save-json')?.addEventListener('click', async (e) => {
     e.preventDefault();
     const underlayVisibility = {};
     ['PH', 'R', '3', '2', '1'].forEach(f => { underlayVisibility[f] = document.getElementById(`vis-underlay-${f.toLowerCase()}`)?.checked || false; });
-    const data = { floorData, nextId, dxfLines, dxfTexts, dxfLayerVisibility, dxfVAxes, dxfHAxes, dxfSkewedAxes, underlayVisibility };
-    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+    
+    const { ProjectService } = await import('../core/services/project_service.js');
+    const projectService = new ProjectService();
+    const jsonStr = projectService.exportProject(underlayVisibility);
+    
+    const blob = new Blob([jsonStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = 'foundation_data.json'; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 100);
@@ -226,30 +223,17 @@ export const setupEventHandlers = function(canvas, state) {
     reader.onload = async ev => {
       try {
         const data = JSON.parse(ev.target.result);
-        const { normalizeAllFloors } = await import('../data/data_normalizer.js');
-
-        if (data.floorData) {
-          Object.keys(data.floorData).forEach(f => {
-            if (floorData[f]) {
-                Object.keys(floorData[f]).forEach(k => delete floorData[f][k]);
-                Object.assign(floorData[f], data.floorData[f]);
-            }
-          });
-          normalizeAllFloors(floorData);
-          repairFoundationData(floorData);
-        }
-        if (data.nextId) updateNextId(data.nextId);
-        setDxfData(data.dxfLines||[], data.dxfTexts||[], data.dxfLayerVisibility||{}, data.dxfVAxes||[], data.dxfHAxes||[], data.dxfSkewedAxes||[]);
-        updateUnderlayCheckboxes(data.underlayVisibility);
+        const { ProjectService } = await import('../core/services/project_service.js');
+        const projectService = new ProjectService();
+        await projectService.importProject(data);
         
-        setFloor('1');
+        updateUnderlayCheckboxes(data.underlayVisibility);
         updateLayerCheckboxes();
         const { updateAllFloorHeightInputs, updateAllDiaphragmSpecsInputs } = await import('../state_manager.js');
         updateAllFloorHeightInputs();
         updateAllDiaphragmSpecsInputs();
         window.updatePropertyPanel?.(); window.updateDataList?.();
         fitAll(); 
-        pushHistory();
         if (typeof recalcAllTributaries === 'function') recalcAllTributaries();
         callRender();
         alert('データを復元しました。');
