@@ -79,6 +79,7 @@ export const saveBeamPopupData = function(type, index, field, value) {
     
     if (field === 'anchorJType') {
         fd.anchorJType = value;
+        if (typeof window.pushHistory === 'function') window.pushHistory();
     } else {
         const b = type === 'beam' ? fd.beams[index] : fd.perimeterBeams[index];
         if (!b) return;
@@ -89,13 +90,17 @@ export const saveBeamPopupData = function(type, index, field, value) {
             if (typeof window.handlePropChange === 'function') window.handlePropChange(type, index, 'axisName', value);
         } else if (field === 'anchorM12') {
             b.anchorM12 = parseInt(value) || 0;
+            if (typeof window.handlePropChange === 'function') window.handlePropChange(type, index, 'anchorM12', parseInt(value) || 0);
         } else if (field === 'anchorM16') {
             b.anchorM16 = parseInt(value) || 0;
+            if (typeof window.handlePropChange === 'function') window.handlePropChange(type, index, 'anchorM16', parseInt(value) || 0);
         } else if (field === 'calcModel') {
             b.calcModel = value;
             if (typeof window.handlePropChange === 'function') window.handlePropChange(type, index, 'calcModel', value);
         } else if (field === 'showReport') {
-            b.showReport = (value === true || value === 'true');
+            const isShow = (value === true || value === 'true');
+            b.showReport = isShow;
+            if (typeof window.handlePropChange === 'function') window.handlePropChange(type, index, 'showReport', isShow);
         }
     }
 
