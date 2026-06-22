@@ -24,9 +24,15 @@ export const calculateWallProps = function(wall, nodes) {
         while (thetaDeg < 0) thetaDeg += 180;
         while (thetaDeg >= 180) thetaDeg -= 180;
 
-        // 10度以内の傾きは水平・垂直にスナップ
-        if (thetaDeg < 10 || thetaDeg > 170) thetaDeg = 0;
-        else if (Math.abs(90 - thetaDeg) < 10) thetaDeg = 90;
+        // 10度以内の傾きは水平・垂直にスナップ（斜め通り芯に載っている場合はバイパス）
+        const skewAxes = window.dxfSkewedAxes || [];
+        const normalizedAxis = (wall.axisName || "").replace(/通り$/, "").trim();
+        const isSkewed = skewAxes.some(ax => (ax.label || "").replace(/通り$/, "").trim() === normalizedAxis);
+
+        if (!isSkewed) {
+          if (thetaDeg < 10 || thetaDeg > 170) thetaDeg = 0;
+          else if (Math.abs(90 - thetaDeg) < 10) thetaDeg = 90;
+        }
 
         wall.angle = thetaDeg; 
 

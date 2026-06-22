@@ -230,7 +230,7 @@ export function syncAllElementSymbols(force = false) {
       if (!n1 || !n2) return;
 
       let bestAxis = "";
-      const MATCH_TOL = 5; // 💡 150mmから5mmに厳格化（近接通り芯の誤判定を防止）
+      const MATCH_TOL = 20; // 💡 5mmから20mmに緩和（緩やかな斜め通り芯の誤判定や吸着ズレを許容）
       
       // A. 垂直判定 (X座標がほぼ同じ) -> X軸名を採用
       if (Math.abs(n1.x - n2.x) < TOL_COORD) {
