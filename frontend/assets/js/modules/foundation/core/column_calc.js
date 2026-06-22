@@ -150,8 +150,14 @@ export const calculateColumnT = function(colIndex, fd, targetFloorKey, allFloorD
       }
       const res = axisResults[axisName];
       
+      const skewAxes = window.dxfSkewedAxes || [];
+      const normalizedAxis = normalizeAxisName(axisName);
+      const skewedAxis = skewAxes.find(ax => normalizeAxisName(ax.label) === normalizedAxis);
+      const isSkewed = !!skewedAxis;
+      
       let qailX = 0, qairX = 0;
       let qailY = 0, qairY = 0;
+      let qailSkew = 0, qairSkew = 0;
       const nCenter = fData.nodes[fNodeIdx];
       
       groups[axisName].forEach(function(w) {
@@ -159,27 +165,52 @@ export const calculateColumnT = function(colIndex, fd, targetFloorKey, allFloorD
         const nRemote = fData.nodes[onidx];
         if (!nRemote || !nCenter) return;
 
-        const q_hi_x = 1.96 * (w.multiplier_x || 0) * Hi;
-        const q_hi_y = 1.96 * (w.multiplier_y || 0) * Hi;
-        
-        res.sumX += (w.multiplier_x || 0) * (w.length_m || 1);
-        res.sumY += (w.multiplier_y || 0) * (w.length_m || 1);
+        if (isSkewed) {
+          const M = w.multiplier !== undefined ? parseFloat(w.multiplier) : 1.0;
+          const q_hi = 1.96 * M * Hi;
+          res.sumX += M * (w.length_m || 1);
+          
+          const vx = skewedAxis.p2.x - skewedAxis.p1.x;
+          const vy = skewedAxis.p2.y - skewedAxis.p1.y;
+          const wx = nRemote.x - nCenter.x;
+          const wy = nRemote.y - nCenter.y;
+          const dot = vx * wx + vy * wy;
 
-        const isRightX = (nRemote.x > nCenter.x + TOLERANCES.CALC_EPSILON);
-        const isLeftX  = (nRemote.x < nCenter.x - TOLERANCES.CALC_EPSILON);
-        const isUpY    = (nRemote.y > nCenter.y + TOLERANCES.CALC_EPSILON);
-        const isDownY  = (nRemote.y < nCenter.y - TOLERANCES.CALC_EPSILON);
+          if (dot > 0.001) {
+            qairSkew += q_hi;
+          } else if (dot < -0.001) {
+            qailSkew += q_hi;
+          }
+        } else {
+          const q_hi_x = 1.96 * (w.multiplier_x || 0) * Hi;
+          const q_hi_y = 1.96 * (w.multiplier_y || 0) * Hi;
+          
+          res.sumX += (w.multiplier_x || 0) * (w.length_m || 1);
+          res.sumY += (w.multiplier_y || 0) * (w.length_m || 1);
 
-        if (isRightX) qairX += q_hi_x; 
-        else if (isLeftX) qailX += q_hi_x;
+          const isRightX = (nRemote.x > nCenter.x + TOLERANCES.CALC_EPSILON);
+          const isLeftX  = (nRemote.x < nCenter.x - TOLERANCES.CALC_EPSILON);
+          const isUpY    = (nRemote.y > nCenter.y + TOLERANCES.CALC_EPSILON);
+          const isDownY  = (nRemote.y < nCenter.y - TOLERANCES.CALC_EPSILON);
 
-        if (isUpY) qairY += q_hi_y; 
-        else if (isDownY) qailY += q_hi_y;
+          if (isRightX) qairX += q_hi_x; 
+          else if (isLeftX) qailX += q_hi_x;
+
+          if (isUpY) qairY += q_hi_y; 
+          else if (isDownY) qailY += q_hi_y;
+        }
       });
 
-      const isXDominant = (res.sumX >= res.sumY);
-      const qail = isXDominant ? qailX : qailY;
-      const qair = isXDominant ? qairX : qairY;
+      let qail = 0;
+      let qair = 0;
+      if (isSkewed) {
+        qail = qailSkew;
+        qair = qairSkew;
+      } else {
+        const isXDominant = (res.sumX >= res.sumY);
+        qail = isXDominant ? qailX : qailY;
+        qair = isXDominant ? qairX : qairY;
+      }
 
       const deltaPower = qair - qail;
       const currentB = parseFloat(fCol.inflectionRatio || 0.5);
