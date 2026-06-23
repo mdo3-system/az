@@ -1,4 +1,5 @@
 import { FLOORS } from '../foundation_cad.js';
+import { getAxisReferenceLine, getProjectedPos } from '../rendering/projection_utils.js';
 
 /**
  * report/column_tension.js
@@ -38,6 +39,7 @@ export const generateColumnTensionReportHtml = function(axisName, allFloorData, 
     if (!floorDataObj || !floorDataObj.columns) return;
 
     const colsOnAxis = [];
+    const refLine = typeof getAxisReferenceLine === 'function' ? getAxisReferenceLine(axisName, allFloorData) : null;
     floorDataObj.columns.forEach((col, idx) => {
       const n = floorDataObj.nodes[col.nodeIndex];
       if (!n) return;
@@ -51,6 +53,14 @@ export const generateColumnTensionReportHtml = function(axisName, allFloorData, 
       if (gridCoord !== null) {
         const d = isVerticalGrid ? n.x : n.y;
         if (Math.abs(d - gridCoord) < 15) {
+          colsOnAxis.push({ col, idx });
+          return;
+        }
+      }
+
+      if (refLine && typeof getProjectedPos === 'function') {
+        const { offset } = getProjectedPos(n, refLine);
+        if (Math.abs(offset) < 15) {
           colsOnAxis.push({ col, idx });
         }
       }
