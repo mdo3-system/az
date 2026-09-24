@@ -1,0 +1,15 @@
+DirectoryIndex frontend/index.html index.html index.php
+
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteBase /
+
+# ルートへのアクセスを frontend/index.html にリライト
+RewriteRule ^$ frontend/index.html [L]
+
+# frontend/ 内に実ファイルが存在する場合、補完して転送
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{DOCUMENT_ROOT}/frontend/$1 -f
+RewriteRule ^(.*)$ frontend/$1 [L]
+</IfModule>
