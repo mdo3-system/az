@@ -338,7 +338,7 @@
   <div class="topbar">
     <div class="topbar-brand">
       <span class="topbar-logo">AZ斜め壁補助計算Web-CAD</span>
-      <span class="topbar-version" style="margin-left: 8px; font-size: 11px; color: var(--text-secondary); opacity: 0.8;">v3.2.8</span>
+      <span class="topbar-version" style="margin-left: 8px; font-size: 11px; color: var(--text-secondary); opacity: 0.8;">v3.2.9</span>
     </div>
     <div class="topbar-floor-tabs" id="floorTabs">
       <button data-floor="PH">PH階</button>
@@ -428,7 +428,7 @@
         <button onclick="document.getElementById('excel-upload').click()" class="side-btn" style="width:100%; padding:10px; font-weight:bold; margin-bottom: 8px;">📥 XLSXからNw読込</button>
         <button onclick="window.openWallAxialModal()" class="side-btn" style="width:100%; padding:10px; font-weight:bold; margin-bottom: 8px;">🧱 壁軸力図(立面フレーム)</button>
         <div id="excelFileName" style="font-size:10px; color:#aaa; margin-bottom:10px; text-align:center;"></div>
-        <div id="app-version" style="position:fixed; bottom:10px; right:10px; color:#666; font-size:10px; z-index:9999; pointer-events:none;">v3.2.8</div>
+        <div id="app-version" style="position:fixed; bottom:10px; right:10px; color:#666; font-size:10px; z-index:9999; pointer-events:none;">v3.2.9</div>
 
         
         <!-- 標準階高設定は右パネルへ移動しました -->
@@ -499,8 +499,8 @@
       </div>
 
       <!-- Hidden file input for JSON configuration loading -->
-      <input type="file" id="json-upload" accept=".json" style="display:none;">
-      <div id="app-version" style="position:fixed; bottom:10px; right:10px; color:#666; font-size:10px; z-index:9999; pointer-events:none;">v3.2.8</div>
+      <input type="file" id="json-upload" accept=".json,.dxf" style="display:none;">
+      <div id="app-version" style="position:fixed; bottom:10px; right:10px; color:#666; font-size:10px; z-index:9999; pointer-events:none;">v3.2.9</div>
     </div>
 
     <!-- ─── CENTER: Canvas ─── -->
@@ -613,7 +613,7 @@
   </div>
 </div>
 
-<script type="module" src="assets/js/modules/foundation/foundation_main.js?v=20260402"></script>
+<script type="module" src="assets/js/modules/foundation/foundation_main.js?v=3.2.9"></script>
   <!-- Calculation Report Modal -->
   <div id="reportModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; align-items:center; justify-content:center;">
     <div style="background:var(--bg-panel); width:95%; height:90%; border-radius:12px; border:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; box-shadow:var(--shadow);">

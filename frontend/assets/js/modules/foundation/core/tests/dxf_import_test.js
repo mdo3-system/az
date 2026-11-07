@@ -4,13 +4,19 @@ import { ProjectService } from '../services/project_service.js';
 
 runner.test('DxfImportService: constructor and DI verification', async (t) => {
   let calledParse = false;
+  let calledMultiParse = false;
   const mockParseDxfFile = async (file, keepExisting, symbolMap) => {
     calledParse = true;
     return ['LAYER1', 'LAYER2'];
   };
+  const mockParseMultipleDxfFiles = async (filesByFloor, keepExisting, symbolMap) => {
+    calledMultiParse = true;
+    return ['GLID', 'COL_1F', 'COL_2F'];
+  };
 
   const service = new DxfImportService({
-    parseDxfFile: mockParseDxfFile
+    parseDxfFile: mockParseDxfFile,
+    parseMultipleDxfFiles: mockParseMultipleDxfFiles
   });
 
   const dummyFile = new File([''], 'test.dxf', { type: 'application/dxf' });
@@ -19,6 +25,11 @@ runner.test('DxfImportService: constructor and DI verification', async (t) => {
   t.assertEquals(calledParse, true, 'Mock parseDxfFile was called');
   t.assertEquals(layers.length, 2, 'Returned layer count matches');
   t.assertEquals(layers[0], 'LAYER1', 'Layer matches');
+
+  const multiLayers = await service.importMultipleFloors({ '1F': dummyFile, '2F': dummyFile });
+  t.assertEquals(calledMultiParse, true, 'Mock parseMultipleDxfFiles was called');
+  t.assertEquals(multiLayers.length, 3, 'Returned multi-floor layer count matches');
+  t.assertEquals(multiLayers[0], 'GLID', 'Multi-floor GLID layer matches');
 });
 
 runner.test('ProjectService: export and import verification', async (t) => {

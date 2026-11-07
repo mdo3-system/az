@@ -157,32 +157,26 @@ export const setupEventHandlers = function(canvas, state) {
       return;
     }
 
-    const formData = new FormData();
+    const filesByFloor = {};
     floors.forEach(f => {
       const input = document.getElementById(`dxf-input-${f}`);
-      if (input && input.files[0]) formData.append(`file_${f}`, input.files[0]);
+      if (input && input.files[0]) {
+        filesByFloor[f.toUpperCase()] = input.files[0];
+      }
     });
 
     const originalText = btn.textContent;
     btn.disabled = true; btn.textContent = '⌛ 統合・解析中...';
 
     try {
-      // Step 1: バックエンドで複数階 DXF を統合
-      console.log('[MergeFloors] Step 1: バックエンドで DXF 統合中...');
-      const response = await fetch(`${API_BASE_URL}/api/v1/merge-floors`, { method: 'POST', body: formData });
-      if (!response.ok) throw new Error(`DXF 統合に失敗しました (HTTP ${response.status})`);
-
-      const blob = await response.blob();
-      const mergedFile = new File([blob], `merged_structural_${Date.now()}.dxf`, { type: 'application/dxf' });
-
-      // Step 2: DXF パース → 正規化 → ID再構築まで DxfImportService で完結
-      console.log('[MergeFloors] Step 2: DXF 解析・正規化中 (DxfImportService)...');
+      // Step 1 & 2: ブラウザ完結型で複数階 DXF 統合・INSERTブロック展開・Shift-JIS自動判別・正規化を実行
+      console.log('[MergeFloors] Step 1: ブラウザ内で複数階 DXF 統合・解析中 (DxfImportService)...');
       const { DxfImportService } = await import('../core/services/dxf_import_service.js');
       const dxfImportService = new DxfImportService();
-      await dxfImportService.importMergedFloors(mergedFile);
+      await dxfImportService.importMultipleFloors(filesByFloor);
 
       // Step 3: UI 更新（正規化完了後なので正確なデータで描画される）
-      console.log('[MergeFloors] Step 3: UI 更新中...');
+      console.log('[MergeFloors] Step 2: UI 更新中...');
       updateUnderlayCheckboxes();
       updateLayerCheckboxes();
       window.updatePropertyPanel?.();
@@ -216,13 +210,58 @@ export const setupEventHandlers = function(canvas, state) {
     setTimeout(() => URL.revokeObjectURL(url), 100);
   });
 
-  document.getElementById('json-upload')?.addEventListener('change', e => {
+  document.getElementById('json-upload')?.addEventListener('change', async e => {
     const file = e.target.files[0];
     if (!file) return;
+
+    // 💡 DXFファイルが選択された場合は JSON.parse せず自動で DXF インポートへ振り分ける
+    if (file.name.toLowerCase().endsWith('.dxf')) {
+      try {
+        console.log('[File Load] DXFファイルが選択されたため DXF インポートとして処理します:', file.name);
+        const { DxfImportService } = await import('../core/services/dxf_import_service.js');
+        const dxfImportService = new DxfImportService();
+        await dxfImportService.importMultipleFloors({ '1F': file });
+        const status1f = document.getElementById('status-1f');
+        if (status1f) {
+          status1f.textContent = '✓ ' + file.name;
+          status1f.style.color = 'var(--success)';
+        }
+        updateUnderlayCheckboxes();
+        updateLayerCheckboxes();
+        window.updatePropertyPanel?.();
+        window.updateDataList?.();
+        fitAll();
+        if (typeof recalcAllTributaries === 'function') recalcAllTributaries();
+        callRender();
+      } catch (err) {
+        console.error('[DXF Load Error]', err);
+        alert('DXF読込失敗: ' + err.message);
+      }
+      e.target.value = '';
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = async ev => {
       try {
-        const data = JSON.parse(ev.target.result);
+        const rawStr = String(ev.target.result || '');
+        // 先頭が DXF セクションヘッダ ("0" + "SECTION") の場合も DXF として処理
+        if (/^\s*0\s+SECTION\b/i.test(rawStr.slice(0, 64))) {
+          const { DxfImportService } = await import('../core/services/dxf_import_service.js');
+          const dxfImportService = new DxfImportService();
+          await dxfImportService.importMultipleFloors({ '1F': file });
+          updateUnderlayCheckboxes();
+          updateLayerCheckboxes();
+          window.updatePropertyPanel?.();
+          window.updateDataList?.();
+          fitAll();
+          if (typeof recalcAllTributaries === 'function') recalcAllTributaries();
+          callRender();
+          e.target.value = '';
+          return;
+        }
+
+        const data = JSON.parse(rawStr);
         const { ProjectService } = await import('../core/services/project_service.js');
         const projectService = new ProjectService();
         await projectService.importProject(data);

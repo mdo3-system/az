@@ -1,9 +1,10 @@
 // Version.js
 if (typeof window !== 'undefined') {
-  window.APP_VERSION = "3.2.8";
+  window.APP_VERSION = "3.2.9";
 }
 
 // APP_VERSION 変更履歴:
+// - 3.2.9: ブラウザ完結型の複数階DXF統合・INSERTブロック展開・Shift-JIS自動判別機能の実装（バックエンド未起動時のERR_CONNECTION_REFUSED解消）および読込ボタンのDXF自動判別対応
 // - 3.2.8: WebAssembly (Wasm) 幾何計算アクセラレーター（az_geometry.wasm / WasmAccelerator）の実装。JS完全透過フォールバックおよび非侵入型設計の導入
 // - 3.2.7: Xserver (az.mdo3.com) 運用環境の構築、Version.js / FIXED_LOGIC.md / .htaccess ルーティング整備、デプロイ自動化対応
 // - 3.2.6: 幾何学的判定による5-7帳票での斜め柱欠落の修正、およびバージョン表示統一

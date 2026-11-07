@@ -55,7 +55,7 @@ import { initUIListeners } from './core/events/ui_listeners.js';
 initCalculationListeners();
 initUIListeners();
 
-console.log('%c🏗 AZ Structural CAD v3.2.8 (Wasm Accelerated)', 'color: #e67e22; font-weight: bold;');
+console.log('%c🏗 AZ Structural CAD v3.2.9 (Wasm Accelerated)', 'color: #e67e22; font-weight: bold;');
 console.log('Type %cAppTestRunner.runAll()%c to run unit tests.', 'color: #3498db; font-weight: bold;', 'color: inherit;');
 import { 
   floorData, FLOORS, currentFloor, setFloor, render, 
