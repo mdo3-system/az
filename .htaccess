@@ -1,5 +1,8 @@
 DirectoryIndex frontend/index.html index.html index.php
 
+AddType application/wasm .wasm
+AddType application/javascript .js
+
 <IfModule mod_rewrite.c>
 RewriteEngine On
 RewriteBase /

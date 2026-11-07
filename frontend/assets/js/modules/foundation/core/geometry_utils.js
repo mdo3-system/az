@@ -1,21 +1,19 @@
 // core/geometry_utils.js
 import { STRESS_TOLERANCE } from './constants.js';
+import WasmAccelerator from './wasm_accelerator.js';
 
 /**
- * 2つのセグメントが同一線上にあるか判定
+ * 2つのセグメントが同一線上にあるか判定 (Wasm / JS 自動切替)
  */
-export function checkCollinear(p1, p2, p3, p4) {
-  const area1 = Math.abs((p2.x - p1.x)*(p3.y - p1.y) - (p2.y - p1.y)*(p3.x - p1.x));
-  const area2 = Math.abs((p2.x - p1.x)*(p4.y - p1.y) - (p2.y - p1.y)*(p4.x - p1.x));
-  const eps = 20.0; // 20mm以内の誤差を許容（手作図の微差を吸収）
-  return area1 < eps * 1000 && area2 < eps * 1000;
+export function checkCollinear(p1, p2, p3, p4, eps = 20.0) {
+  return WasmAccelerator.checkCollinear(p1, p2, p3, p4, eps);
 }
 
 /**
  * 共線上の2つのセグメント [p1,p2] と [p3,p4] の重複タイプを返す
  */
 export function getSegmentOverlap(p1, p2, p3, p4) {
-  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  const dist = (a, b) => WasmAccelerator.fastHypot(a.x - b.x, a.y - b.y);
   const l1 = dist(p1, p2);
   const l2 = dist(p3, p4);
   
@@ -84,58 +82,43 @@ export function dedupPolygon(poly, eps = 5) {
     for (let i = 0; i < poly.length; i++) {
         const p = poly[i];
         const prev = out.length > 0 ? out[out.length - 1] : null;
-        if (prev && Math.hypot(p.x - prev.x, p.y - prev.y) < eps) continue;
+        if (prev && WasmAccelerator.fastHypot(p.x - prev.x, p.y - prev.y) < eps) continue;
         out.push(p);
     }
     // 末尾と先頭の重複チェック
     if (out.length > 1) {
         const first = out[0], last = out[out.length - 1];
-        if (Math.hypot(last.x - first.x, last.y - first.y) < eps) out.pop();
+        if (WasmAccelerator.fastHypot(last.x - first.x, last.y - first.y) < eps) out.pop();
     }
     return out;
 }
 
+/**
+ * 多角形ポリゴンの厳密面積計算 (Wasm / JS 自動切替)
+ */
 export function calcPolygonAreaStrict(poly) {
-    let area = 0;
-    for (let i = 0; i < poly.length; i++) {
-        const p1 = poly[i], p2 = poly[(i + 1) % poly.length];
-        area += (p1.x * p2.y - p2.x * p1.y);
-    }
-    return Math.abs(area) / 2;
+    return WasmAccelerator.calcPolygonAreaStrict(poly);
 }
 
 /**
- * 点 (px, py) から線分 (ax, ay)-(bx, by) への最短距離を返す
+ * 点 (px, py) から線分 (ax, ay)-(bx, by) への最短距離を返す (Wasm / JS 自動切替)
  */
 export function distToSegment(px, py, ax, ay, bx, by) {
-  const dx = bx - ax, dy = by - ay;
-  const len2 = dx * dx + dy * dy;
-  if (len2 === 0) return Math.hypot(px - ax, py - ay);
-  let t = ((px - ax) * dx + (py - ay) * dy) / len2;
-  t = Math.max(0, Math.min(1, t));
-  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+  return WasmAccelerator.pointToSegmentDist({ x: px, y: py }, { x: ax, y: ay }, { x: bx, y: by });
 }
 
 /**
- * 点 (x, y) が多角形 pts 内にあるか判定する (Winding Number / Ray Casting)
+ * 点 (x, y) が多角形 pts 内にあるか判定する (Wasm / JS 自動切替)
  */
 export function pointInPolygon(x, y, pts) {
-  let inside = false;
-  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
-    const xi = pts[i].x, yi = pts[i].y;
-    const xj = pts[j].x, yj = pts[j].y;
-    if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
-      inside = !inside;
-    }
-  }
-  return inside;
+  return WasmAccelerator.pointInPolygon({ x, y }, pts);
 }
 
 export function distToBeamLine(px, py, ax, ay, bx, by) {
     const dx = bx - ax, dy = by - ay;
     const l2 = dx * dx + dy * dy;
-    if (l2 === 0) return Math.hypot(px - ax, py - ay);
+    if (l2 === 0) return WasmAccelerator.fastHypot(px - ax, py - ay);
     let t = ((px - ax) * dx + (py - ay) * dy) / l2;
     // tを0〜1にクランプしないことで、無限直線との距離を求める
-    return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+    return WasmAccelerator.fastHypot(px - (ax + t * dx), py - (ay + t * dy));
 }

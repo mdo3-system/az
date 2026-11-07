@@ -1,9 +1,10 @@
 // Version.js
 if (typeof window !== 'undefined') {
-  window.APP_VERSION = "3.2.7";
+  window.APP_VERSION = "3.2.8";
 }
 
 // APP_VERSION 変更履歴:
+// - 3.2.8: WebAssembly (Wasm) 幾何計算アクセラレーター（az_geometry.wasm / WasmAccelerator）の実装。JS完全透過フォールバックおよび非侵入型設計の導入
 // - 3.2.7: Xserver (az.mdo3.com) 運用環境の構築、Version.js / FIXED_LOGIC.md / .htaccess ルーティング整備、デプロイ自動化対応
 // - 3.2.6: 幾何学的判定による5-7帳票での斜め柱欠落の修正、およびバージョン表示統一
 // - 3.2.5: 斜め壁スナップ判定の改善、アンカーボルト帳票除外、Bi設定の堅牢化チェック
