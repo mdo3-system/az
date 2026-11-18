@@ -34,7 +34,7 @@ const WALL_SNAP_TOL_MM     = 250;   // 耐力壁端点のノードスナップ�
 const DEFAULT_WALL_MULT    = 2.0;   // 倍率テキスト未取得時のデフォルト倍率
 
 /** モジュール版数（キャッシュ混在検知用。APP_VERSION と常に一致させること） */
-export const DXF_MODULE_VERSION = '3.2.11';
+export const DXF_MODULE_VERSION = '3.2.12';
 
 let _lastImportSummary = null;
 
@@ -344,6 +344,11 @@ async function _processDxfData(parsedItems, keepExisting, symbolMap = null) {
   pushHistory();
 
   // 8. 検収サマリーを記録
+  const uploadedFloors = Array.from(new Set(
+    items
+      .map(it => it.floorTag ? _resolveFloor('_' + String(it.floorTag).toUpperCase()) : null)
+      .filter(Boolean)
+  ));
   const floorStats = {};
   FLOORS.forEach(f => {
     const fd = floorData[f];
@@ -361,6 +366,7 @@ async function _processDxfData(parsedItems, keepExisting, symbolMap = null) {
     skewedAxesCount: (gridNodes.skewedAxes || []).length,
     skewedAxisLabels: (gridNodes.skewedAxes || []).map(a => a.label),
     auxAxisCount: gridNodes.auxAxisCount || 0,
+    uploadedFloors,
     floors: floorStats,
     unmatchedWalls,
     defaultMultiplierWalls
@@ -805,13 +811,13 @@ function _computeGridIntersections(gridLines, texts, keepExisting) {
     vAxes.forEach(va => {
       va.lines.forEach(vl => {
         const pt = _lineIntersect(sSeg, vl, 0.05);
-        if (pt) addNodeUnique(`${sa.label}${va.label}`, pt.x, pt.y);
+        if (pt) addNodeUnique(`${sa.label}_${va.label}`, pt.x, pt.y);
       });
     });
     hAxes.forEach(ha => {
       ha.lines.forEach(hl => {
         const pt = _lineIntersect(sSeg, hl, 0.05);
-        if (pt) addNodeUnique(`${sa.label}${ha.label}`, pt.x, pt.y);
+        if (pt) addNodeUnique(`${sa.label}_${ha.label}`, pt.x, pt.y);
       });
     });
   });

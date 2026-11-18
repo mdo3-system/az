@@ -10,7 +10,7 @@ import { handleMouseHover, finishPolygon, handleSlabDraw, handleSkewedAxisDraw, 
 import { recalcAllTributaries } from '../core/data_synchronizer.js';
 
 /** モジュール版数（キャッシュ混在検知用。APP_VERSION と常に一致させること） */
-export const MAIN_SETUP_VERSION = '3.2.11';
+export const MAIN_SETUP_VERSION = '3.2.12';
 
 /**
  * 画面(HTML)のバージョンと DXF 取込モジュールのバージョンが一致するか検査する。
@@ -84,8 +84,9 @@ function _showDxfImportSummaryModal(summary) {
   document.getElementById('dxfImportSummaryModal')?.remove();
 
   const floorLabels = { '1': '1F', '2': '2F', '3': '3F', 'PH': 'PH', 'R': 'R' };
+  const uploaded = new Set(summary.uploadedFloors || []);
   const floorRows = ['1', '2', '3', 'PH', 'R']
-    .filter(f => summary.floors && summary.floors[f] && (summary.floors[f].columns > 0 || summary.floors[f].walls > 0))
+    .filter(f => summary.floors && summary.floors[f] && (uploaded.has(f) || summary.floors[f].columns > 0 || summary.floors[f].walls > 0))
     .map(f => {
       const s = summary.floors[f];
       return `<tr><td style="padding:4px 8px;border-bottom:1px solid var(--border);">${floorLabels[f] || f}</td><td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:right;">${s.columns}</td><td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:right;">${s.walls}</td></tr>`;

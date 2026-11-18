@@ -1,9 +1,10 @@
 // Version.js
 if (typeof window !== 'undefined') {
-  window.APP_VERSION = "3.2.11";
+  window.APP_VERSION = "3.2.12";
 }
 
 // APP_VERSION 変更履歴:
+// - 3.2.12: 検収サマリーモーダルにDXF添付済みの0件階（PH等）を表示、斜め軸交点ノード符号を「斜め軸_通り芯」形式（A1_X3a等）へ統一
 // - 3.2.11: キャッシュ起因の旧JS混在対策（.htaccessで html/js/wasm/json を no-cache 化、モジュール版数照合による旧キャッシュ検知警告）
 // - 3.2.10: ARCHITREND DXF通り芯の文字結合・バルーン十字線除外・斜め通り芯(dxfSkewedAxes)自動登録・補助通り芯(AX/AY)分離、下階柱の誤取り込み防止、耐力壁ブロック自動取り込み、および完了検収サマリーモーダルの実装
 // - 3.2.9: ブラウザ完結型の複数階DXF統合・INSERTブロック展開・Shift-JIS自動判別機能の実装（バックエンド未起動時のERR_CONNECTION_REFUSED解消）および読込ボタンのDXF自動判別対応
