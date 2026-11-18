@@ -4,10 +4,33 @@ import {
   findSnapNode, findBeamNear, findSlabAt, findDiaphragmAt, pushHistory, undo, redo,
   dxfLines, dxfTexts, dxfLayerVisibility, dxfVAxes, dxfHAxes, dxfSkewedAxes, nextId, updateNextId, setDxfData, getCurrentFloorData, repairFoundationData
 } from '../foundation_cad.js';
-import { parseDxfFile } from '../foundation_dxf.js';
+import { parseDxfFile, DXF_MODULE_VERSION } from '../foundation_dxf.js';
 import { callRender, fitAll } from '../rendering_helpers.js';
 import { handleMouseHover, finishPolygon, handleSlabDraw, handleSkewedAxisDraw, handleWallDraw, handleBeamDraw, handleColumnPlace, handleSelect, handleDeleteSelected, handleDelete } from '../tool_handlers.js';
 import { recalcAllTributaries } from '../core/data_synchronizer.js';
+
+/** モジュール版数（キャッシュ混在検知用。APP_VERSION と常に一致させること） */
+export const MAIN_SETUP_VERSION = '3.2.11';
+
+/**
+ * 画面(HTML)のバージョンと DXF 取込モジュールのバージョンが一致するか検査する。
+ * 不一致 = ブラウザが古い JS をキャッシュから使っている状態。旧ロジックで黙って処理しない。
+ * @returns {boolean} 一致すれば true
+ */
+function _assertDxfModulesFresh() {
+  const htmlVer = (document.querySelector('.topbar-version')?.textContent || '').replace(/^v/, '').trim();
+  const mismatch = [];
+  if (DXF_MODULE_VERSION !== MAIN_SETUP_VERSION) mismatch.push(`foundation_dxf.js=${DXF_MODULE_VERSION || '不明(旧版)'}`);
+  if (htmlVer && htmlVer !== MAIN_SETUP_VERSION) mismatch.push(`画面=${htmlVer}`);
+  if (mismatch.length === 0) return true;
+  console.error('[VersionCheck] モジュール版数の不一致:', { main_setup: MAIN_SETUP_VERSION, mismatch });
+  alert(
+    '古いプログラムが読み込まれています（キャッシュの混在）。\n' +
+    `main_setup.js=${MAIN_SETUP_VERSION} / ${mismatch.join(' / ')}\n\n` +
+    'Ctrl+Shift+R（Mac: Cmd+Shift+R）で再読込してから、もう一度実行してください。'
+  );
+  return false;
+}
 
 // バックエンドURL
 const API_BASE_URL = (window.location.protocol === 'file:' || window.location.port !== '8000')
@@ -244,6 +267,7 @@ export const setupEventHandlers = function(canvas, state) {
       alert('1F平面図は必須です。');
       return;
     }
+    if (!_assertDxfModulesFresh()) return;
 
     const filesByFloor = {};
     floors.forEach(f => {

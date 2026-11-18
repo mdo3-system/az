@@ -33,6 +33,9 @@ const SKEW_MIN_LEN         = 1500;  // 斜め通り芯本線の最小長さ(A1: 
 const WALL_SNAP_TOL_MM     = 250;   // 耐力壁端点のノードスナップ許容距離(909mmモジュールの半分未満)
 const DEFAULT_WALL_MULT    = 2.0;   // 倍率テキスト未取得時のデフォルト倍率
 
+/** モジュール版数（キャッシュ混在検知用。APP_VERSION と常に一致させること） */
+export const DXF_MODULE_VERSION = '3.2.11';
+
 let _lastImportSummary = null;
 
 /** 直近の DXF インポート検収サマリーを取得する */

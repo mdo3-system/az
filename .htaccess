@@ -3,6 +3,23 @@ DirectoryIndex frontend/index.html index.html index.php
 AddType application/wasm .wasm
 AddType application/javascript .js
 
+# ─── キャッシュ制御 (v3.2.11) ───────────────────────────────
+# HTML / JS モジュール / Wasm / JSON は毎回サーバーへ再検証させる。
+# ES Modules の import 先にはバージョンクエリが付かないため、
+# 長期キャッシュ (max-age=604800) のままだと新旧モジュールが混在する。
+# ETag による再検証なので未変更時は 304 応答となり速度影響は小さい。
+<IfModule mod_expires.c>
+  <FilesMatch "\.(html?|js|mjs|wasm|json)$">
+    ExpiresActive Off
+  </FilesMatch>
+</IfModule>
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html?|js|mjs|wasm|json)$">
+    Header unset Expires
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>
+
 <IfModule mod_rewrite.c>
 RewriteEngine On
 RewriteBase /
