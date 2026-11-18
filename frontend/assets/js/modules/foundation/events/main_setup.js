@@ -50,6 +50,94 @@ export function updateUnderlayCheckboxes(underlayVisibility = null) {
 }
 
 /**
+ * DXF 統合・解析完了時の検収サマリー通知モーダルを表示する
+ */
+function _showDxfImportSummaryModal(summary) {
+  if (!summary) {
+    alert('DXF の統合・解析が完了しました。');
+    return;
+  }
+
+  document.getElementById('dxfImportSummaryModal')?.remove();
+
+  const floorLabels = { '1': '1F', '2': '2F', '3': '3F', 'PH': 'PH', 'R': 'R' };
+  const floorRows = ['1', '2', '3', 'PH', 'R']
+    .filter(f => summary.floors && summary.floors[f] && (summary.floors[f].columns > 0 || summary.floors[f].walls > 0))
+    .map(f => {
+      const s = summary.floors[f];
+      return `<tr><td style="padding:4px 8px;border-bottom:1px solid var(--border);">${floorLabels[f] || f}</td><td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:right;">${s.columns}</td><td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:right;">${s.walls}</td></tr>`;
+    }).join('');
+
+  const skewedText = summary.skewedAxesCount > 0
+    ? `${summary.skewedAxesCount}本 (${(summary.skewedAxisLabels || []).join(', ')})`
+    : '0本';
+
+  const unmatched = summary.unmatchedWalls || [];
+  const defaultMult = summary.defaultMultiplierWalls || [];
+  const hasWarnings = unmatched.length > 0 || defaultMult.length > 0;
+
+  let warningHtml = '';
+  if (hasWarnings) {
+    const unmatchedItems = unmatched.map(u =>
+      `<li>[${u.floor}F] (${u.x1}, ${u.y1}) - (${u.x2}, ${u.y2}) 倍率:${u.multiplier} — ${u.reason}</li>`
+    ).join('');
+    const defaultItems = defaultMult.map(d =>
+      `<li>[${d.floor}F] (${d.x1}, ${d.y1}) - (${d.x2}, ${d.y2}) — 倍率テキスト未検出のためデフォルト値(${d.multiplier})を適用</li>`
+    ).join('');
+
+    warningHtml = `
+      <div style="margin-top:12px;padding:10px;background:rgba(245,166,35,0.12);border:1px solid var(--warn);border-radius:6px;">
+        <div style="font-weight:bold;color:var(--warn);margin-bottom:6px;">⚠️ 要確認（スナップ未到達: ${unmatched.length}件 / デフォルト倍率: ${defaultMult.length}件）</div>
+        <ul style="margin:0;padding-left:18px;max-height:140px;overflow-y:auto;font-size:11px;line-height:1.5;">
+          ${unmatchedItems}
+          ${defaultItems}
+        </ul>
+      </div>
+    `;
+  } else {
+    warningHtml = `
+      <div style="margin-top:12px;padding:8px 10px;background:rgba(52,199,123,0.12);border:1px solid var(--success);border-radius:6px;font-size:11px;color:var(--success);">
+        ✓ すべての耐力壁が正常にノードへスナップされ、倍率も取得されました。
+      </div>
+    `;
+  }
+
+  const modal = document.createElement('div');
+  modal.id = 'dxfImportSummaryModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = `
+    <div style="background:var(--bg-panel);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;width:min(480px,92vw);padding:18px;box-shadow:0 12px 32px rgba(0,0,0,0.5);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h3 style="margin:0;font-size:14px;">✅ DXF 統合・解析 完了（検収サマリー）</h3>
+        <button id="btnCloseDxfSummaryX" style="background:none;border:none;color:var(--text-secondary);font-size:18px;cursor:pointer;">&times;</button>
+      </div>
+      <div style="font-size:12px;margin-bottom:10px;line-height:1.6;">
+        <div><strong>通り芯:</strong> 垂直 ${summary.vAxesCount}本 / 水平 ${summary.hAxesCount}本 / 斜め ${skewedText}</div>
+        ${summary.auxAxisCount > 0 ? `<div style="font-size:11px;color:var(--text-secondary);">※ 斜め軸用補助通り芯 ${summary.auxAxisCount}本は斜め軸交点にのみ使用（直交グリッドから除外済み）</div>` : ''}
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="background:var(--bg-panel-alt);">
+            <th style="padding:4px 8px;text-align:left;border-bottom:1px solid var(--border);">階</th>
+            <th style="padding:4px 8px;text-align:right;border-bottom:1px solid var(--border);">柱 (本)</th>
+            <th style="padding:4px 8px;text-align:right;border-bottom:1px solid var(--border);">耐力壁 (枚)</th>
+          </tr>
+        </thead>
+        <tbody>${floorRows || '<tr><td colspan="3" style="padding:8px;text-align:center;color:var(--text-muted);">検出要素なし</td></tr>'}</tbody>
+      </table>
+      ${warningHtml}
+      <div style="margin-top:14px;text-align:right;">
+        <button id="btnCloseDxfSummaryOk" class="side-btn" style="padding:6px 18px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">OK</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  const close = () => modal.remove();
+  modal.querySelector('#btnCloseDxfSummaryX')?.addEventListener('click', close);
+  modal.querySelector('#btnCloseDxfSummaryOk')?.addEventListener('click', close);
+}
+
+/**
  * UI 設定とイベント登録
  */
 export const setupEventHandlers = function(canvas, state) {
@@ -184,6 +272,7 @@ export const setupEventHandlers = function(canvas, state) {
       window.fitAll?.();
       callRender();
       console.log('[MergeFloors] 完了 ✅');
+      _showDxfImportSummaryModal(dxfImportService.getLastSummary?.());
 
     } catch (err) {
       console.error('[MergeFloors] エラー:', err);
@@ -233,6 +322,7 @@ export const setupEventHandlers = function(canvas, state) {
         fitAll();
         if (typeof recalcAllTributaries === 'function') recalcAllTributaries();
         callRender();
+        _showDxfImportSummaryModal(dxfImportService.getLastSummary?.());
       } catch (err) {
         console.error('[DXF Load Error]', err);
         alert('DXF読込失敗: ' + err.message);

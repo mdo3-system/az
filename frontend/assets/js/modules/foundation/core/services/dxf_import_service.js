@@ -4,13 +4,14 @@
  * DXF 読み込みフロー全体を管理する Service クラス
  * 依存関係を外部から注入（DI）してテスト可能にする
  */
-import { parseDxfFile, parseMultipleDxfFiles } from '../../foundation_dxf.js';
+import { parseDxfFile, parseMultipleDxfFiles, getLastDxfImportSummary } from '../../foundation_dxf.js';
 import { floorData, nextId, dxfLines, dxfTexts, dxfLayerVisibility, dxfVAxes, dxfHAxes, dxfSkewedAxes, setDxfData } from '../../foundation_cad.js';
 
 export class DxfImportService {
   constructor(dependencies = {}) {
     this.parseDxfFile = dependencies.parseDxfFile || parseDxfFile;
     this.parseMultipleDxfFiles = dependencies.parseMultipleDxfFiles || parseMultipleDxfFiles;
+    this.getLastSummary = dependencies.getLastSummary || getLastDxfImportSummary;
     this.floorData = dependencies.floorData || floorData;
     this.setDxfData = dependencies.setDxfData || setDxfData;
   }
