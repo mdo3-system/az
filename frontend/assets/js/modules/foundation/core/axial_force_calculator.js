@@ -73,12 +73,27 @@ export function calculateAxialForcesForAxis(axisName, allFloorData, floorList) {
     });
   });
 
-  // 近接する節点をクラスタリング（150mm以内の遊び）
+  // 近接する節点をクラスタリング（20mm以内のスナップ・丸め誤差のみ統合し、X6b/X7等の105mm近接別通り芯は分離する）
+  const CLUSTER_TOL_MM = 20;
   const pValues = [];
   rawPValues.sort((a, b) => a - b).forEach(v => {
-    const existing = pValues.find(ex => Math.abs(ex - v) < 150);
+    const existing = pValues.find(ex => Math.abs(ex - v) < CLUSTER_TOL_MM);
     if (existing === undefined) pValues.push(v);
   });
+
+  // 生座標を pValues の代表座標にスナップ（forceMap のキーと pValues の完全一致を保証）
+  const snapToCluster = (rawVal) => {
+    let best = rawVal;
+    let bestDist = CLUSTER_TOL_MM;
+    for (let i = 0; i < pValues.length; i++) {
+      const d = Math.abs(pValues[i] - rawVal);
+      if (d < bestDist) {
+        bestDist = d;
+        best = pValues[i];
+      }
+    }
+    return best;
+  };
 
   const forceMap = {};
   floorList.forEach(f => forceMap[f] = {});
@@ -91,7 +106,10 @@ export function calculateAxialForcesForAxis(axisName, allFloorData, floorList) {
     if (prevFloorData && forceMap[prevFloorData.floor]) {
       Object.entries(forceMap[prevFloorData.floor]).forEach(([pos, forces]) => {
         const d = parseFloat(pos);
-        const currentNodes = Array.from(new Set(fm.walls.flatMap(w => [getPos(fm.fd.nodes[w.n1]), getPos(fm.fd.nodes[w.n2])]))).sort((a,b)=>a-b);
+        const currentNodes = Array.from(new Set(fm.walls.flatMap(w => [
+          snapToCluster(getPos(fm.fd.nodes[w.n1])),
+          snapToCluster(getPos(fm.fd.nodes[w.n2]))
+        ]))).sort((a,b)=>a-b);
         if (currentNodes.length > 0) {
           let leftIdx = -1;
           for(let i=0; i<currentNodes.length; i++) {
@@ -121,7 +139,8 @@ export function calculateAxialForcesForAxis(axisName, allFloorData, floorList) {
     // 当該階の壁による軸力 N_kN = P * H / L を計算して流し込む
     fm.walls.forEach(w => {
       const n1 = fm.fd.nodes[w.n1], n2 = fm.fd.nodes[w.n2];
-      const p1 = getPos(n1), p2 = getPos(n2);
+      const p1 = snapToCluster(getPos(n1));
+      const p2 = snapToCluster(getPos(n2));
       const L_geo = Math.abs(p2 - p1);
       const L_mm = parseFloat(w.lengthOverride) || L_geo;
       const L = L_mm / 1000;

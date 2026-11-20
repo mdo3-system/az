@@ -145,8 +145,16 @@ export const calculateColumnT = function(colIndex, fd, targetFloorKey, allFloorD
     const { pValues, forceMap, refLine } = calcResult;
     const colL = getProjectedPos(targetNode, refLine).L;
 
-    // 投影座標 colL に最も近い節点 p を探す (150mm 以内)
-    const p = pValues.find(ex => Math.abs(ex - colL) < 150);
+    // 投影座標 colL に最も近い節点 p を探す (20mm 以内の最近接)
+    let p = undefined;
+    let bestPDist = 20;
+    pValues.forEach(ex => {
+      const d = Math.abs(ex - colL);
+      if (d < bestPDist) {
+        bestPDist = d;
+        p = ex;
+      }
+    });
     if (p === undefined) return; // この通り芯上の節点に柱が位置していない場合は無視
 
     // 4. 加力方向（L, R）ごとに、最上階から対象階までの軸力履歴を集計
@@ -245,7 +253,9 @@ export const calculateColumnT = function(colIndex, fd, targetFloorKey, allFloorD
         const maxP = Math.max(p1, p2);
         const minP = Math.min(p1, p2);
         const M = w.multiplier || 0;
-        const val = 1.96 * M * Hi;
+        const wallH_mm = parseFloat(w.heightOverride) || parseFloat(currentFd.floorHeight) || 2730;
+        const wallHi = wallH_mm / 1000;
+        const val = 1.96 * M * wallHi;
 
         if (maxP <= colL + 0.1) {
           qail_Hi += val;

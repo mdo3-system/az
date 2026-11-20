@@ -56,3 +56,47 @@ runner.test('calculateColumnT - Multi-floor Axial Summation', (t) => {
   // sign = -1 (右から) なので、 -5.3508 * 0.5 = -2.6754
   t.assertAlmostEqual(xCase.Ni_upper, -2.6754, 0.0001, 'Upper floor wall axial load should be accumulated correctly');
 });
+
+runner.test('calculateColumnT - 105mm Close Columns (X6b/X7) and Wall heightOverride', (t) => {
+  // Y15通り上で 1F に X6b(x=2622), 2F に X7(x=2727) と 105mm 離れた別柱があるケース
+  const floorList = ['2', '1'];
+  const allFloorData = {
+    '2': {
+      nodes: {
+        'x7': { x: 2727, y: 3636 },
+        'x8': { x: 3636, y: 3636 }
+      },
+      walls: [
+        { n1: 'x7', n2: 'x8', multiplier: 6.8, heightOverride: 1691, axisName: 'Y15' }
+      ],
+      columns: [
+        { id: 'X7Y15', nodeIndex: 'x7', nw: 2.727 }
+      ],
+      floorHeight: 2730
+    },
+    '1': {
+      nodes: {
+        'x6':  { x: 1818, y: 3636 },
+        'x6b': { x: 2622, y: 3636 }
+      },
+      walls: [
+        { n1: 'x6', n2: 'x6b', multiplier: 4.3, axisName: 'Y15' }
+      ],
+      columns: [
+        { id: 'X6bY15', nodeIndex: 'x6b', nw: 0 }
+      ],
+      floorHeight: 2730
+    }
+  };
+
+  const res = calculateColumnT(0, allFloorData['2'], '2', allFloorData, floorList);
+  const y15L = res.cases.find(c => c.axisName === 'Y15' && c.name.includes('左から'));
+  const y15R = res.cases.find(c => c.axisName === 'Y15' && c.name.includes('右から'));
+
+  // q2_Hi = 1.96 * 6.8 * 1.691 = 22.537648
+  t.assertAlmostEqual(y15L.q2_Hi, 22.5376, 0.001, 'Wall heightOverride (1691mm) should be used for q2_Hi');
+  // 左から加力時: X7 は壁の左端 -> N = +22.5376 * 0.5 = +11.2688, T = 11.2688 - 2.727 = 8.5418
+  t.assertAlmostEqual(y15L.Ni_bot, 11.2688, 0.001, 'X7Y15 Ni_bot (Left push) should not be zeroed by X6b clustering');
+  t.assertAlmostEqual(y15L.T_bot, 8.5418, 0.001, 'X7Y15 T_bot (Left push) should match 8.542 kN');
+  t.assertAlmostEqual(y15R.Ni_bot, -11.2688, 0.001, 'X7Y15 Ni_bot (Right push) should be compression');
+});
