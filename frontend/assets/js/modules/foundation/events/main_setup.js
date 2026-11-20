@@ -10,7 +10,7 @@ import { handleMouseHover, finishPolygon, handleSlabDraw, handleSkewedAxisDraw, 
 import { recalcAllTributaries } from '../core/data_synchronizer.js';
 
 /** モジュール版数（キャッシュ混在検知用。APP_VERSION と常に一致させること） */
-export const MAIN_SETUP_VERSION = '3.2.12';
+export const MAIN_SETUP_VERSION = '3.2.13';
 
 /**
  * 画面(HTML)のバージョンと DXF 取込モジュールのバージョンが一致するか検査する。

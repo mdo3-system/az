@@ -2,6 +2,162 @@
 import { clipPolygonStrict, dedupPolygon, calcPolygonAreaStrict } from './geometry_utils.js';
 import { getRebarArea } from './beam_calc.js';
 
+/**
+ * 連続する共線中間ノードを間引き、コーナー頂点と各コーナー辺に属する元辺インデックス群を返す
+ */
+function _simplifyCollinearCorners(ccwPts) {
+    const n = ccwPts.length;
+    const cornerIndices = [];
+    for (let i = 0; i < n; i++) {
+        const prev = ccwPts[(i - 1 + n) % n];
+        const cur  = ccwPts[i];
+        const next = ccwPts[(i + 1) % n];
+        const v1x = cur.x - prev.x, v1y = cur.y - prev.y;
+        const v2x = next.x - cur.x, v2y = next.y - cur.y;
+        const l1 = Math.hypot(v1x, v1y), l2 = Math.hypot(v2x, v2y);
+        if (l1 < 1 || l2 < 1) continue;
+        const cross = Math.abs(v1x * v2y - v1y * v2x) / (l1 * l2);
+        const dot   = (v1x * v2x + v1y * v2y) / (l1 * l2);
+        // 角度差がある、または折り返す点のみコーナーとして残す
+        if (cross > 1e-3 || dot <= 0) {
+            cornerIndices.push(i);
+        }
+    }
+
+    if (cornerIndices.length < 3) {
+        return {
+            corners: ccwPts,
+            groups: ccwPts.map((_, idx) => [idx])
+        };
+    }
+
+    const kCount = cornerIndices.length;
+    const corners = cornerIndices.map(idx => ccwPts[idx]);
+    const groups = [];
+    for (let k = 0; k < kCount; k++) {
+        const startIdx = cornerIndices[k];
+        const endIdx = cornerIndices[(k + 1) % kCount];
+        const subEdges = [];
+        let cur = startIdx;
+        while (cur !== endIdx) {
+            subEdges.push(cur);
+            cur = (cur + 1) % n;
+        }
+        groups.push(subEdges);
+    }
+    return { corners, groups };
+}
+
+/**
+ * CGAL Straight Skeleton (window.SkeletonBuilder) を用いてコーナー辺ごとの負担ポリゴンを算出する
+ * Float32 精度を最大化するため重心シフト＋メートル単位変換を行う
+ */
+function _buildTributaryWithCGAL(corners) {
+    const sb = (typeof window !== 'undefined') ? window.SkeletonBuilder : null;
+    if (!sb || !sb.module) return null;
+
+    const kCount = corners.length;
+    let cx = 0, cy = 0;
+    corners.forEach(p => { cx += p.x; cy += p.y; });
+    cx /= kCount;
+    cy /= kCount;
+
+    const ring = corners.map(p => [(p.x - cx) / 1000, (p.y - cy) / 1000]);
+    ring.push(ring[0]);
+
+    let res = null;
+    try {
+        res = sb.buildFromPolygon([ring]);
+    } catch (_err) {
+        return null;
+    }
+    if (!res || !res.vertices || !res.polygons || res.polygons.length === 0) return null;
+
+    const vertsMm = res.vertices.map(v => ({
+        x: v[0] * 1000 + cx,
+        y: v[1] * 1000 + cy
+    }));
+
+    const MATCH_TOL = 15; // mm (Float32丸め誤差許容)
+    const polyList = res.polygons.map(idxs => idxs.map(vi => vertsMm[vi]));
+    const used = new Array(polyList.length).fill(false);
+    const matched = new Array(kCount).fill(null);
+
+    for (let k = 0; k < kCount; k++) {
+        const c1 = corners[k];
+        const c2 = corners[(k + 1) % kCount];
+
+        let bestIdx = -1;
+        for (let pIdx = 0; pIdx < polyList.length; pIdx++) {
+            if (used[pIdx]) continue;
+            const pv = polyList[pIdx];
+            const hasC1 = pv.some(v => Math.hypot(v.x - c1.x, v.y - c1.y) < MATCH_TOL);
+            const hasC2 = pv.some(v => Math.hypot(v.x - c2.x, v.y - c2.y) < MATCH_TOL);
+            if (hasC1 && hasC2) {
+                bestIdx = pIdx;
+                break;
+            }
+        }
+        if (bestIdx !== -1) {
+            used[bestIdx] = true;
+            matched[k] = polyList[bestIdx];
+        } else {
+            matched[k] = [];
+        }
+    }
+    return matched;
+}
+
+/**
+ * 半平面クリッピングによるフォールバック（CGAL未初期化時・凸多角形向け）
+ */
+function _buildTributaryFallback(corners) {
+    const kCount = corners.length;
+    const edgeLines = [];
+    for (let i = 0; i < kCount; i++) {
+        const p1 = corners[i], p2 = corners[(i + 1) % kCount];
+        const dx = p2.x - p1.x, dy = p2.y - p1.y;
+        const len = Math.hypot(dx, dy);
+        if (len < 1) { edgeLines.push(null); continue; }
+        const nx = -dy / len, ny = dx / len;
+        const d = nx * p1.x + ny * p1.y;
+        edgeLines.push({ p1, p2, nx, ny, d, len });
+    }
+
+    return edgeLines.map((Ei, i) => {
+        if (!Ei) return [];
+        let pi_poly = [...corners];
+        for (let j = 0; j < kCount; j++) {
+            if (i === j || !edgeLines[j]) continue;
+            const Ej = edgeLines[j];
+            const coeffA = Ei.nx - Ej.nx;
+            const coeffB = Ei.ny - Ej.ny;
+            const coeffC = Ej.d - Ei.d;
+            if (Math.hypot(coeffA, coeffB) > 1e-7) {
+                pi_poly = clipPolygonStrict(pi_poly, coeffA, coeffB, coeffC);
+            } else if (coeffC > 1e-7) {
+                pi_poly = [];
+            }
+            if (pi_poly.length === 0) break;
+        }
+        return pi_poly;
+    });
+}
+
+/**
+ * 共線中間ノードで分割されたスパン [p1, p2] に対し、辺の法線方向で親ポリゴンをスライスする
+ */
+function _slicePolygonBySpan(parentPoly, p1, p2) {
+    const dx = p2.x - p1.x, dy = p2.y - p1.y;
+    const len = Math.hypot(dx, dy);
+    if (len < 1 || !parentPoly || parentPoly.length < 3) return [];
+    const ux = dx / len, uy = dy / len;
+    // clipPolygonStrict は a*x + b*y + c <= 0 を残す
+    let sliced = clipPolygonStrict(parentPoly, -ux, -uy, ux * p1.x + uy * p1.y);
+    sliced = clipPolygonStrict(sliced, ux, uy, -(ux * p2.x + uy * p2.y));
+    return sliced;
+}
+
 export const calculateSlabTributary = function(slab, nodes, beams) {
     if (!slab.nodeIds || slab.nodeIds.length < 3) return;
     const initialPts = slab.nodeIds.map(nid => nodes[nid]).filter(Boolean);
@@ -15,77 +171,58 @@ export const calculateSlabTributary = function(slab, nodes, beams) {
     const CCW_PTS = signedArea > 0 ? [...initialPts] : [...initialPts].reverse();
     const NUM_PTS = CCW_PTS.length;
 
-    const edgeLines = [];
-    for (let i = 0; i < NUM_PTS; i++) {
-        const p1 = CCW_PTS[i], p2 = CCW_PTS[(i + 1) % NUM_PTS];
-        const dx = p2.x - p1.x, dy = p2.y - p1.y;
-        const len = Math.hypot(dx, dy);
-        if (len < 1) continue;
-        const nx = -dy / len, ny = dx / len;
-        const d = nx * p1.x + ny * p1.y;
-        edgeLines.push({ p1, p2, nx, ny, d, len });
-    }
-    const NUM_EDGES = edgeLines.length;
+    // 1. 共線中間ノードを間引いたコーナー多角形で亀甲分割（CGAL Straight Skeleton 優先）
+    const { corners, groups } = _simplifyCollinearCorners(CCW_PTS);
+    const parentPolys = _buildTributaryWithCGAL(corners) || _buildTributaryFallback(corners);
 
-    slab.tributaryPolygons = [];
-    slab.edgeLs = [];
-    slab.edgeAreas = [];
-    slab.edgeLengths = []; 
+    // 2. 各コーナー辺の負担ポリゴンを、元のスパン（共線辺）ごとにスライスして割り当てる
+    const ccwPolys   = new Array(NUM_PTS).fill([]);
+    const ccwAreas   = new Array(NUM_PTS).fill(0);
+    const ccwLs      = new Array(NUM_PTS).fill(0);
+    const ccwLengths = new Array(NUM_PTS).fill(0);
 
-    for (let i = 0; i < NUM_EDGES; i++) {
-        const Ei = edgeLines[i];
-        let pi_poly = [...CCW_PTS];
+    const EPS_MM = 5;
+    const mult = slab.triangleMultiplier || 1.33;
 
-        for (let j = 0; j < NUM_EDGES; j++) {
-            if (i === j) continue;
-            const Ej = edgeLines[j];
+    groups.forEach((subEdgeIndices, k) => {
+        const parentPoly = parentPolys[k];
+        if (!parentPoly || parentPoly.length < 3) return;
+        const isSingleSpan = subEdgeIndices.length === 1;
 
-            const coeffA = Ei.nx - Ej.nx;
-            const coeffB = Ei.ny - Ej.ny;
-            const coeffC = Ej.d - Ei.d;
+        subEdgeIndices.forEach(origCcwIdx => {
+            const p1 = CCW_PTS[origCcwIdx];
+            const p2 = CCW_PTS[(origCcwIdx + 1) % NUM_PTS];
+            const edgeLen_mm = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+            if (edgeLen_mm < 1) return;
 
-            if (Math.hypot(coeffA, coeffB) > 1e-7) {
-                pi_poly = clipPolygonStrict(pi_poly, coeffA, coeffB, coeffC);
-            } else {
-                if (coeffC > 1e-7) { pi_poly = []; }
+            const spanPoly = isSingleSpan ? parentPoly : _slicePolygonBySpan(parentPoly, p1, p2);
+            const deduped = dedupPolygon(spanPoly, EPS_MM);
+            if (deduped && deduped.length >= 3) {
+                const area_mm2 = calcPolygonAreaStrict(deduped);
+                const area_m2 = area_mm2 / 1e6;
+                const edgeLen_m = edgeLen_mm / 1000;
+                const isTri = deduped.length === 3;
+                const finalL = isTri ? (area_m2 * mult) / edgeLen_m : area_m2 / edgeLen_m;
+
+                ccwPolys[origCcwIdx]   = deduped;
+                ccwAreas[origCcwIdx]   = area_m2;
+                ccwLs[origCcwIdx]      = finalL;
+                ccwLengths[origCcwIdx] = edgeLen_m;
             }
-            if (pi_poly.length === 0) break;
-        }
-
-        const EPS_MM = 5; 
-        const deduped = dedupPolygon(pi_poly, EPS_MM);
-
-        if (deduped.length >= 3) {
-            const area_mm2 = calcPolygonAreaStrict(deduped);
-            const area_m2 = area_mm2 / 1e6;
-            const edgeLen_m = Ei.len / 1000;
-            const mult = slab.triangleMultiplier || 1.33;
-            const isTri = deduped.length === 3;
-            const finalL = isTri ? (area_m2 * mult) / edgeLen_m : area_m2 / edgeLen_m;
-
-            slab.tributaryPolygons.push(deduped);
-            slab.edgeAreas.push(area_m2);
-            slab.edgeLs.push(finalL);
-            slab.edgeLengths.push(edgeLen_m);
-        } else {
-            slab.tributaryPolygons.push([]);
-            slab.edgeAreas.push(0);
-            slab.edgeLs.push(0);
-            slab.edgeLengths.push(0);
-        }
-    }
+        });
+    });
 
     const origPolygons = new Array(NUM_PTS).fill([]);
-    const origAreas = new Array(NUM_PTS).fill(0);
-    const origLs = new Array(NUM_PTS).fill(0);
-    const origLengths = new Array(NUM_PTS).fill(0);
+    const origAreas    = new Array(NUM_PTS).fill(0);
+    const origLs       = new Array(NUM_PTS).fill(0);
+    const origLengths  = new Array(NUM_PTS).fill(0);
 
     for (let i = 0; i < NUM_PTS; i++) {
         const origIdx = (signedArea > 0) ? i : (NUM_PTS - 2 - i + NUM_PTS) % NUM_PTS;
-        origPolygons[origIdx] = slab.tributaryPolygons[i];
-        origAreas[origIdx] = slab.edgeAreas[i];
-        origLs[origIdx] = slab.edgeLs[i];
-        origLengths[origIdx] = slab.edgeLengths[i];
+        origPolygons[origIdx] = ccwPolys[i];
+        origAreas[origIdx]    = ccwAreas[i];
+        origLs[origIdx]       = ccwLs[i];
+        origLengths[origIdx]  = ccwLengths[i];
     }
 
     slab.tributaryPolygons = origPolygons;

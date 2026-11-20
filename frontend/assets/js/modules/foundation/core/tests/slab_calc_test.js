@@ -43,3 +43,31 @@ runner.test('Slab: Tributary Multiplier (1.33 for Triangles)', (t) => {
   // 負担幅 B = (Area * 1.33) / L = (2 * 1.33) / 2 = 1.33
   t.assertAlmostEqual(slab.edgeLs[0], 1.33, 0.01, 'Triangle base tributary width');
 });
+
+runner.test('Slab: L-shaped Concave Polygon with Collinear Mid-Nodes (SkeletonBuilder)', (t) => {
+  // 6m x 5m から左下 3m x 2m を欠いたL字型（左辺に中間ノードあり）
+  const nodes = [
+    { x: 0, y: 0 },
+    { x: 0, y: -1500 },
+    { x: 0, y: -3000 },
+    { x: 3000, y: -3000 },
+    { x: 3000, y: -5000 },
+    { x: 6000, y: -5000 },
+    { x: 6000, y: 0 }
+  ];
+  const slab = { nodeIds: [0, 1, 2, 3, 4, 5, 6] };
+  calculateSlabTributary(slab, nodes, []);
+
+  // L字全面積 = 6*5 - 3*2 = 24.0 m2
+  const totalArea = (slab.edgeAreas || []).reduce((s, a) => s + a, 0);
+  if (typeof window !== 'undefined' && window.SkeletonBuilder && window.SkeletonBuilder.module) {
+    t.assertAlmostEqual(totalArea, 24.0, 0.05, 'Total tributary area equals L-shape area 24.0 m2');
+    // 全7辺すべてに非ゼロの面積と妥当な負担幅が割り当てられること
+    slab.edgeAreas.forEach((a, i) => {
+      t.assertEquals(a > 0.1, true, `Edge ${i} has positive area (${a.toFixed(3)})`);
+    });
+  } else {
+    // SkeletonBuilder 未ロード環境でもクラッシュせず 7 辺分の配列が返ること
+    t.assertEquals(slab.edgeAreas.length, 7, 'Fallback returns 7 edge areas');
+  }
+});

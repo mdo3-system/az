@@ -45,6 +45,15 @@ import './core/tests/wasm_test.js';
 import WasmAccelerator from './core/wasm_accelerator.js';
 WasmAccelerator.init();
 
+// --- CGAL Straight Skeleton エンジンの初期化 (不整形スラブ亀甲分割用) ---
+if (typeof window !== 'undefined' && window.SkeletonBuilder && typeof window.SkeletonBuilder.init === 'function') {
+  window.SkeletonBuilder.init().then(() => {
+    console.log('⚡ [SkeletonBuilder] CGAL Straight Skeleton Initialized');
+    if (typeof window.recalcAllTributaries === 'function') window.recalcAllTributaries();
+    if (typeof window.callRender === 'function') window.callRender();
+  }).catch(err => console.warn('[SkeletonBuilder] Init failed, using JS fallback:', err));
+}
+
 // --- 基盤機能のグローバル登録 ---
 window.AppEventBus = AppEventBus;
 window.AppTestRunner = AppTestRunner;
@@ -55,7 +64,7 @@ import { initUIListeners } from './core/events/ui_listeners.js';
 initCalculationListeners();
 initUIListeners();
 
-console.log('%c🏗 AZ Structural CAD v3.2.12 (Wasm Accelerated)', 'color: #e67e22; font-weight: bold;');
+console.log('%c🏗 AZ Structural CAD v3.2.13 (Wasm Accelerated)', 'color: #e67e22; font-weight: bold;');
 console.log('Type %cAppTestRunner.runAll()%c to run unit tests.', 'color: #3498db; font-weight: bold;', 'color: inherit;');
 import { 
   floorData, FLOORS, currentFloor, setFloor, render, 

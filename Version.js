@@ -1,9 +1,10 @@
 // Version.js
 if (typeof window !== 'undefined') {
-  window.APP_VERSION = "3.2.12";
+  window.APP_VERSION = "3.2.13";
 }
 
 // APP_VERSION 変更履歴:
+// - 3.2.13: 不整形スラブ（凹多角形・共線中間ノード含む）の亀甲分割にCGAL Straight Skeleton (SkeletonBuilder) ＋共線スパン法線スライスを導入し、基礎梁の負担領域算出精度を改善
 // - 3.2.12: 検収サマリーモーダルにDXF添付済みの0件階（PH等）を表示、斜め軸交点ノード符号を「斜め軸_通り芯」形式（A1_X3a等）へ統一
 // - 3.2.11: キャッシュ起因の旧JS混在対策（.htaccessで html/js/wasm/json を no-cache 化、モジュール版数照合による旧キャッシュ検知警告）
 // - 3.2.10: ARCHITREND DXF通り芯の文字結合・バルーン十字線除外・斜め通り芯(dxfSkewedAxes)自動登録・補助通り芯(AX/AY)分離、下階柱の誤取り込み防止、耐力壁ブロック自動取り込み、および完了検収サマリーモーダルの実装
